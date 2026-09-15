@@ -8,6 +8,8 @@ import {
   type Breakpoint,
 } from '@jjapgma/ui-spec';
 import { Button } from '../../components/ui/Button';
+import { AddressField } from './AddressField';
+import { FileUploadControl } from './files/FileAssets';
 export function Inspector({
   node,
   breakpoint,
@@ -33,6 +35,11 @@ export function Inspector({
       const target = breakpoint === 'desktop' ? n.style : (n.responsive[breakpoint] ??= {});
       if (value === undefined) delete target[key];
       else Object.assign(target, { [key]: value });
+    });
+  }
+  function changeMobileHidden(hidden: boolean) {
+    onUpdate((n) => {
+      n.responsive.mobile = { hidden };
     });
   }
   return (
@@ -72,9 +79,13 @@ export function Inspector({
         <fieldset disabled={node.locked}>
           <section>
             <h3>내용</h3>
+            {['image', 'fileUpload'].includes(node.type) && (
+              <FileUploadControl key={node.id} node={node} />
+            )}
             {propertySchema
               .filter((p) => (p.types as readonly string[]).includes(node.type))
               .map((property) => (
+                // Keep the property catalog declarative while allowing select-only metadata.
                 <label
                   key={property.key}
                   className={property.editor === 'checkbox' ? 'check-field' : ''}
@@ -91,6 +102,70 @@ export function Inspector({
                         }
                       />
                       {property.label}
+                    </>
+                  ) : property.editor === 'select' ? (
+                    <>
+                      {property.label}
+                      <select
+                        value={String(
+                          node.props[property.key] ??
+                            ('options' in property ? property.options[0]?.[0] : '') ??
+                            '',
+                        )}
+                        onChange={(e) =>
+                          onUpdate((n) =>
+                            Object.assign(n.props, { [property.key]: e.target.value }),
+                          )
+                        }
+                      >
+                        {'options' in property &&
+                          property.options.map(([value, label]) => (
+                            <option key={value} value={value}>
+                              {label}
+                            </option>
+                          ))}
+                      </select>
+                    </>
+                  ) : property.key === 'href' || property.key === 'src' ? (
+                    <AddressField
+                      key={`${node.id}-${property.key}`}
+                      field={property.key}
+                      label={property.label}
+                      value={node.props[property.key] ?? ''}
+                      onCommit={(value) =>
+                        onUpdate((n) => {
+                          Object.assign(n.props, { [property.key]: value });
+                        })
+                      }
+                    />
+                  ) : property.editor === 'textarea' ? (
+                    <>
+                      {property.label}
+                      <textarea
+                        rows={5}
+                        maxLength={5000}
+                        value={String(node.props[property.key] ?? '')}
+                        onChange={(e) =>
+                          onUpdate((n) => {
+                            Object.assign(n.props, { [property.key]: e.target.value });
+                          })
+                        }
+                      />
+                    </>
+                  ) : property.editor === 'number' ? (
+                    <>
+                      {property.label}
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={node.props.value ?? 60}
+                        onChange={(e) =>
+                          onUpdate((n) => {
+                            n.props.value = Math.min(100, Math.max(0, Number(e.target.value)));
+                          })
+                        }
+                      />
                     </>
                   ) : (
                     <>
@@ -162,13 +237,25 @@ export function Inspector({
                     onChange={(e) => changeStyle('align', e.target.value)}
                   >
                     <option value="stretch">가득 채우기</option>
-                    <option value="flex-start">시작</option>
+                    <option value="flex-start">왼쪽 / 시작</option>
                     <option value="center">가운데</option>
-                    <option value="flex-end">끝</option>
+                    <option value="flex-end">오른쪽 / 끝</option>
                   </select>
                 </label>
               </>
             )}
+            <label>
+              내용 정렬
+              <select
+                value={style.textAlign ?? 'left'}
+                onChange={(e) => changeStyle('textAlign', e.target.value)}
+              >
+                <option value="left">왼쪽 정렬</option>
+                <option value="center">가운데 정렬</option>
+                <option value="right">오른쪽 정렬</option>
+                <option value="justify">양끝 정렬</option>
+              </select>
+            </label>
             <div className="field-grid">
               {(['padding', 'gap'] as const).map((key) => (
                 <label key={key}>
@@ -193,6 +280,45 @@ export function Inspector({
               />
               이 화면에서 숨기기
             </label>
+            <label className="check-field">
+              <input
+                type="checkbox"
+                checked={
+                  Boolean(style.hidden && breakpoint === 'mobile') ||
+                  Boolean(node.responsive.mobile?.hidden)
+                }
+                onChange={(e) => changeMobileHidden(e.target.checked)}
+              />
+              모바일에서 숨기기
+            </label>
+            {registry[node.type].children && (
+              <label>
+                그리드 열 수
+                <input
+                  type="number"
+                  min={1}
+                  max={12}
+                  value={style.gridColumns ?? 2}
+                  onChange={(e) =>
+                    changeStyle('gridColumns', Math.max(1, Math.min(12, Number(e.target.value))))
+                  }
+                />
+              </label>
+            )}
+            {node.type === 'grid' && (
+              <label>
+                그리드 행 수
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={style.gridRows ?? 1}
+                  onChange={(e) =>
+                    changeStyle('gridRows', Math.max(1, Math.min(50, Number(e.target.value))))
+                  }
+                />
+              </label>
+            )}
           </section>
           <section>
             <h3>모양</h3>
@@ -206,6 +332,14 @@ export function Inspector({
                   }
                   onChange={(e) => changeStyle('background', e.target.value)}
                 />
+                <input
+                  aria-label="배경색 코드"
+                  value={style.background ?? '#ffffff'}
+                  onChange={(e) => {
+                    if (/^(#[0-9a-f]{6}|transparent)$/i.test(e.target.value))
+                      changeStyle('background', e.target.value);
+                  }}
+                />
               </label>
               <label>
                 글자색
@@ -213,6 +347,14 @@ export function Inspector({
                   type="color"
                   value={style.color === 'transparent' ? '#202520' : (style.color ?? '#202520')}
                   onChange={(e) => changeStyle('color', e.target.value)}
+                />
+                <input
+                  aria-label="글자색 코드"
+                  value={style.color ?? '#202520'}
+                  onChange={(e) => {
+                    if (/^(#[0-9a-f]{6}|transparent)$/i.test(e.target.value))
+                      changeStyle('color', e.target.value);
+                  }}
                 />
               </label>
               <label>

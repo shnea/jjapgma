@@ -1,5 +1,7 @@
 import { registry, type ComponentType } from './registry.js';
 import { nodeId } from './id.js';
+import { inputTypes, optionTypes } from './catalog/forms.js';
+import { horizontalTypes } from './catalog/layout.js';
 import { validateSpec, type UiNode, type UiSpec, type Breakpoint } from './schema.js';
 export function createNode(type: ComponentType): UiNode {
   return {
@@ -9,16 +11,33 @@ export function createNode(type: ComponentType): UiNode {
     locked: false,
     props: {
       text: registry[type].text,
-      ...(['input', 'textarea'].includes(type) ? { placeholder: '입력해 주세요' } : {}),
+      ...(inputTypes.includes(type) ? { placeholder: '입력해 주세요' } : {}),
+      ...(inputTypes.includes(type) ? { labelVisible: true, labelPosition: 'top' as const } : {}),
+      ...(['checkbox', 'radio'].includes(type)
+        ? { optionDirection: 'column' as const, optionAlign: 'left' as const }
+        : {}),
+      ...(type === 'heading' ? { titleLevel: 'h2' as const } : {}),
+      ...(optionTypes.includes(type)
+        ? {
+            items:
+              type === 'table'
+                ? '이름|상태|역할\n홍길동|활성|편집자\n김민수|활성|뷰어'
+                : '첫 번째 항목\n두 번째 항목\n세 번째 항목',
+          }
+        : {}),
+      ...(type === 'link' ? { href: '#details' } : {}),
     },
     style: registry[type].children
       ? {
-          direction: type === 'stack' ? 'row' : 'column',
+          direction: horizontalTypes.includes(type) ? 'row' : 'column',
           gap: 16,
           padding: 24,
           ...(type === 'card' ? { background: '#ffffff', radius: 12 } : {}),
+          ...(type === 'grid' ? { gridColumns: 2, gridRows: 1 } : {}),
         }
-      : {},
+      : type === 'spacer'
+        ? { height: '48px' }
+        : {},
     responsive: {},
     children: [],
   };

@@ -64,7 +64,7 @@ Docker의 npm registry 조회로 제공 버전을 확인했습니다. 참고: [N
 | --- | --- | --- | --- |
 | 인증 | eocs/agent/integrations/login-service.md | 외부 가입·인증·IdP 토큰; 앱 callback·서명/state/nonce/PKCE 검증·세션·권한 | 코드 구현, 실제 IdP 검증 대기 |
 | AI | eocs/agent/integrations/외부서비스_ai-agent-api_사용지침.md | n8n의 모델 호출·프롬프트; 앱 명세·권한·MCP·검증 | 연동 구현 전 |
-| 파일 | 별도 지침 없음 | Asset 단계에서 저장·인가 구현 | 미착수 |
+| 파일 | eocs/agent/integrations/file-service.md | 외부 파일 본문/preview/download/보존; 앱 권한·프록시·프로젝트 참조 | 코드/모의 검증 완료, 실제 응답/JWT/보존 분류 계약 확인 대기. [상세](FILE_INTEGRATION.md) |
 
 AI 공식 endpoint는 https://n8n.shnea.kr/webhook/jjapgma. 현재 제공 계약은 messages → 자연어 응답이며 MCP와 Canvas 편집은 아직 외부에서 지원하지 않습니다. Provider 직접 호출이나 자체 우회는 하지 않습니다. 필요한 n8n 작업은 사용자에게 구체적으로 전달합니다.
 

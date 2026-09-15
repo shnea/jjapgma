@@ -14,7 +14,11 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   const response = await fetch(`/api${path}`, {
     ...options,
     credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken, ...options.headers },
+    headers: {
+      ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
+      'X-CSRF-Token': csrfToken,
+      ...options.headers,
+    },
   });
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));

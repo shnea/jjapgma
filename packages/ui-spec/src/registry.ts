@@ -1,4 +1,10 @@
+import { formComponents, inputTypes, optionTypes } from './catalog/forms.js';
+import { layoutComponents } from './catalog/layout.js';
+import { contentComponents } from './catalog/content.js';
 export const registry = {
+  ...formComponents,
+  ...layoutComponents,
+  ...contentComponents,
   container: { name: '영역', category: '배치', children: true, text: '', icon: 'square' },
   stack: { name: '가로 배치', category: '배치', children: true, text: '', icon: 'columns' },
   heading: {
@@ -49,23 +55,115 @@ export const registry = {
 export type ComponentType = keyof typeof registry;
 export const componentTypes = Object.keys(registry) as ComponentType[];
 export const propertySchema = [
+  { key: 'value', label: '진행률 (0–100)', editor: 'number', types: ['progress'] },
   {
     key: 'text',
     label: '내용',
     editor: 'text',
-    types: ['heading', 'text', 'button', 'input', 'textarea', 'checkbox'],
+    types: ['heading', 'text', 'button', ...inputTypes, ...Object.keys(contentComponents)],
   },
-  { key: 'placeholder', label: '입력 안내', editor: 'text', types: ['input', 'textarea'] },
+  {
+    key: 'placeholder',
+    label: '입력 안내',
+    editor: 'text',
+    types: ['input', 'textarea', 'password', 'number', 'search', 'otp'],
+  },
+  {
+    key: 'items',
+    label: '항목 (한 줄에 하나, 표 열은 |로 구분)',
+    editor: 'textarea',
+    types: optionTypes,
+  },
+  { key: 'href', label: '이동 주소', editor: 'text', types: ['link'] },
+  { key: 'src', label: '이미지 경로 (같은 사이트)', editor: 'text', types: ['image'] },
+  {
+    key: 'titleLevel',
+    label: '제목 단계',
+    editor: 'select',
+    options: [
+      ['h1', 'H1'],
+      ['h2', 'H2'],
+      ['h3', 'H3'],
+      ['h4', 'H4'],
+      ['h5', 'H5'],
+      ['h6', 'H6'],
+    ],
+    types: ['heading'],
+  },
+  {
+    key: 'controlType',
+    label: '입력 종류',
+    editor: 'select',
+    options: [
+      ['text', '일반'],
+      ['password', '비밀번호'],
+      ['number', '숫자'],
+      ['search', '검색'],
+      ['date', '날짜'],
+      ['time', '시간'],
+      ['color', '색상'],
+      ['range', '범위'],
+    ],
+    types: ['input'],
+  },
+  {
+    key: 'labelPosition',
+    label: '라벨 위치',
+    editor: 'select',
+    options: [
+      ['top', '위'],
+      ['left', '왼쪽'],
+      ['right', '오른쪽'],
+    ],
+    types: inputTypes,
+  },
+  {
+    key: 'optionDirection',
+    label: '항목 배치',
+    editor: 'select',
+    options: [
+      ['column', '세로'],
+      ['row', '가로'],
+    ],
+    types: ['checkbox', 'radio'],
+  },
+  {
+    key: 'optionAlign',
+    label: '항목 정렬',
+    editor: 'select',
+    options: [
+      ['left', '왼쪽'],
+      ['center', '가운데'],
+      ['right', '오른쪽'],
+    ],
+    types: ['checkbox', 'radio'],
+  },
+  {
+    key: 'iconName',
+    label: '아이콘',
+    editor: 'select',
+    options: [
+      ['plus', '플러스'],
+      ['star', '별'],
+      ['heart', '하트'],
+      ['search', '검색'],
+      ['settings', '설정'],
+      ['check', '체크'],
+      ['x', '닫기'],
+    ],
+    types: ['icon', 'iconButton', 'fab', 'toggleButton'],
+  },
+  { key: 'labelVisible', label: '라벨 표시', editor: 'checkbox', types: inputTypes },
   {
     key: 'required',
     label: '필수 입력',
     editor: 'checkbox',
-    types: ['input', 'textarea', 'checkbox'],
+    types: inputTypes,
   },
   {
     key: 'disabled',
     label: '사용 안 함',
     editor: 'checkbox',
-    types: ['button', 'input', 'textarea', 'checkbox'],
+    types: ['button', 'iconButton', 'toggleButton', 'dropdownButton', 'fab', ...inputTypes],
   },
 ] as const;

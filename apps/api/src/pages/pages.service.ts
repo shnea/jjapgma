@@ -9,6 +9,7 @@ import { randomUUID } from 'node:crypto';
 import { createSpec, validateSpec, type UiSpec } from '@jjapgma/ui-spec';
 import { Database } from '../database/database.js';
 import { projectAccess } from '../projects/access.js';
+import { validateFileReferences } from '../files/references.js';
 @Injectable()
 export class PagesService {
   constructor(@Inject(Database) private readonly db: Database) {}
@@ -69,6 +70,7 @@ export class PagesService {
         throw new ConflictException(
           '다른 곳에서 저장한 변경이 있습니다. 내 변경을 내려받거나 최신 화면을 불러오세요.',
         );
+      await validateFileReferences(client, spec, page.project_id);
       const revision = page.revision + 1;
       const saved = (
         await client.query(

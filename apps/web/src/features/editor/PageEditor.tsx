@@ -23,6 +23,8 @@ import {
   moveNode,
   registry,
   removeNode,
+  dropElement,
+  type DropPosition,
   type Breakpoint,
   type ComponentType,
   type UiNode,
@@ -35,6 +37,7 @@ import { Layers } from './Layers';
 import { Inspector } from './Inspector';
 import { NodeRenderer } from './NodeRenderer';
 import { useHistory } from './history';
+import { FileAssetsProvider } from './files/FileAssets';
 import type { Page, PageSummary } from './types';
 export function PageEditor({
   initial,
@@ -54,7 +57,9 @@ export function PageEditor({
   const [breakpoint, setBreakpoint] = useState<Breakpoint>('desktop');
   const [tab, setTab] = useState('elements');
   const [preview, setPreview] = useState(false);
-  const [zoom, setZoom] = useState(75);
+  const [zoom, setZoom] = useState(100);
+  const [canvasWidths, setCanvasWidths] = useState({ desktop: 1440, tablet: 768, mobile: 375 });
+  const canvasScroll = useRef<HTMLDivElement>(null);
   const [name, setName] = useState(initial.name);
   const [savedSpec, setSavedSpec] = useState(initial.spec);
   const [savedName, setSavedName] = useState(initial.name);
@@ -131,14 +136,31 @@ export function PageEditor({
     change(() => insertNode(spec, parent, node));
     setSelected(node.id);
   }
-  function drop(parentId: string, data: string) {
-    try {
-      const value = JSON.parse(data);
-      if (typeof value.id === 'string') change(() => moveNode(spec, value.id, parentId));
-      else if (Object.hasOwn(registry, value.type)) add(value.type, parentId);
-    } catch {
-      setError('이 요소를 옮길 수 없습니다.');
-    }
+  function drop(targetId: string, data: string, position: DropPosition = 'inside') {
+    change(() => {
+      const next = dropElement(spec, targetId, data, position);
+      const queue = [next.root];
+      while (queue.length) {
+        const node = queue.pop()!;
+        if (!findNode(spec.root, node.id)) {
+          setSelected(node.id);
+          break;
+        }
+        queue.push(...node.children);
+      }
+      return next;
+    });
+  }
+  function resize(id: string, width: number, height: number) {
+    change(() =>
+      editSpec(spec, (root) => {
+        const node = findNode(root, id);
+        if (!node || isLocked(root, id)) throw new Error('잠긴 요소는 크기를 조절할 수 없습니다.');
+        const target = breakpoint === 'desktop' ? node.style : (node.responsive[breakpoint] ??= {});
+        target.width = `${Math.min(2560, width)}px`;
+        target.height = `${Math.min(1600, height)}px`;
+      }),
+    );
   }
   function remove() {
     change(() => removeNode(spec, selected.id));
@@ -243,9 +265,22 @@ export function PageEditor({
     link.click();
     URL.revokeObjectURL(url);
   }
-  const width = { desktop: 1200, tablet: 768, mobile: 375 }[breakpoint];
+  const width = canvasWidths[breakpoint];
   return (
-    <>
+    <FileAssetsProvider
+      value={{
+        projectId: initial.project_id,
+        canUpload: (id) => !readOnly && !isLocked(spec.root, id),
+        onAttach: (id, attachment) =>
+          change(() =>
+            editSpec(spec, (root) => {
+              if (isLocked(root, id)) throw new Error('잠긴 요소입니다.');
+              const node = findNode(root, id);
+              if (node) node.props.attachment = attachment;
+            }),
+          ),
+      }}
+    >
       <header className="editor-toolbar">
         <div className="history-tools">
           <Button
@@ -371,9 +406,25 @@ export function PageEditor({
         <main className="canvas-workspace">
           <div className="canvas-heading">
             <span>{name}</span>
-            <span>{width} × 자동 높이</span>
+            <label className="canvas-width">
+              화면 너비{' '}
+              <input
+                aria-label="캔버스 너비"
+                type="number"
+                min={320}
+                max={2560}
+                value={width}
+                onChange={(e) =>
+                  setCanvasWidths((v) => ({
+                    ...v,
+                    [breakpoint]: Math.min(2560, Math.max(320, Number(e.target.value))),
+                  }))
+                }
+              />{' '}
+              px
+            </label>
           </div>
-          <div className="canvas-scroll">
+          <div className="canvas-scroll" ref={canvasScroll}>
             <div className="artboard-wrap" style={{ width: (width * zoom) / 100 }}>
               <div className="artboard" style={{ width, zoom: zoom / 100 }}>
                 <NodeRenderer
@@ -382,6 +433,7 @@ export function PageEditor({
                   selectedId={selected.id}
                   onSelect={setSelected}
                   onDrop={readOnly ? undefined : drop}
+                  onResize={readOnly ? undefined : resize}
                   preview={preview}
                 />
               </div>
@@ -392,19 +444,41 @@ export function PageEditor({
               {preview ? '미리보기' : '선택 도구'}
               <span className="muted">
                 {' '}
-                · {readOnly ? '보기 전용' : '클릭하여 선택 · Ctrl/⌘ + Z 실행 취소'}
+                · {readOnly ? '보기 전용' : '드래그하여 이동 · Ctrl/⌘ + Z 실행 취소'}
               </span>
             </span>
-            <label className="zoom-control">
-              <span className="sr-only">확대 비율</span>
-              <select value={zoom} onChange={(e) => setZoom(Number(e.target.value))}>
-                {[25, 50, 75, 100, 125, 150].map((v) => (
-                  <option key={v} value={v}>
-                    {v}%
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className="canvas-zoom-tools">
+              <Button
+                variant="ghost"
+                onClick={() =>
+                  setZoom(
+                    Math.max(
+                      25,
+                      Math.min(
+                        150,
+                        Math.floor(
+                          (((canvasScroll.current?.clientWidth ?? width) - 80) / width) * 100,
+                        ),
+                      ),
+                    ),
+                  )
+                }
+              >
+                화면에 맞춤
+              </Button>
+              <label className="zoom-control">
+                <span className="sr-only">확대 비율</span>
+                <select value={zoom} onChange={(e) => setZoom(Number(e.target.value))}>
+                  {Array.from(new Set([25, 50, 75, 100, 125, 150, zoom]))
+                    .sort((a, b) => a - b)
+                    .map((v) => (
+                      <option key={v} value={v}>
+                        {v}%
+                      </option>
+                    ))}
+                </select>
+              </label>
+            </div>
           </div>
         </main>
         {!preview && (
@@ -448,6 +522,6 @@ export function PageEditor({
           </aside>
         )}
       </div>
-    </>
+    </FileAssetsProvider>
   );
 }

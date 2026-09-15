@@ -1,5 +1,20 @@
 name: jjapgma-test
 services:
+  file-service:
+    image: jjapgma-tests:local
+    build: { context: ., target: test }
+    command: ['node', 'tests/fixtures/file-service.mjs']
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:8080/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 3s
+      timeout: 3s
+      retries: 20
   db:
     image: postgres:17-bookworm@sha256:051f7b7b3abdd564d5d1bd1e8c4b9c1b6e77087d1dd22020ede611c096a272e0
     environment:
@@ -26,8 +41,14 @@ services:
       NODE_ENV: test
       APP_URL: http://nginx:8080
       DEV_AUTH_BYPASS: 'true'
+      FILE_SERVICE_BASE_URL: http://file-service:8080
+      FILE_SERVICE_BEARER_TOKEN: isolated-file-test
       DATABASE_URL: postgres://jjapgma:isolated-test-only@db:5432/jjapgma_test
-    depends_on: { migrate: { condition: service_completed_successfully } }
+    depends_on:
+      {
+        migrate: { condition: service_completed_successfully },
+        file-service: { condition: service_healthy },
+      }
     healthcheck:
       test:
         [

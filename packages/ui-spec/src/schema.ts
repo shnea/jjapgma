@@ -17,16 +17,54 @@ export const styleSchema = z
     direction: z.enum(['row', 'column']).optional(),
     align: z.enum(['stretch', 'flex-start', 'center', 'flex-end']).optional(),
     justify: z.enum(['flex-start', 'center', 'flex-end', 'space-between']).optional(),
+    textAlign: z.enum(['left', 'center', 'right', 'justify']).optional(),
+    gridColumns: z.number().int().min(1).max(12).optional(),
+    gridRows: z.number().int().min(1).max(50).optional(),
     hidden: z.boolean().optional(),
   })
   .strict();
 export type NodeStyle = z.infer<typeof styleSchema>;
-const propsSchema = z
+export const propsSchema = z
   .object({
     text: z.string().max(5000),
     placeholder: z.string().max(300).optional(),
     required: z.boolean().optional(),
     disabled: z.boolean().optional(),
+    labelVisible: z.boolean().optional(),
+    labelPosition: z.enum(['top', 'left', 'right']).optional(),
+    optionDirection: z.enum(['row', 'column']).optional(),
+    optionAlign: z.enum(['left', 'center', 'right']).optional(),
+    controlType: z
+      .enum(['text', 'password', 'number', 'search', 'date', 'time', 'color', 'range'])
+      .optional(),
+    titleLevel: z.enum(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']).optional(),
+    iconName: z.string().max(60).optional(),
+    value: z.number().min(0).max(100).optional(),
+    items: z.string().max(5000).optional(),
+    attachment: z
+      .object({
+        fileId: z.string().regex(/^[a-zA-Z0-9_-]{1,128}$/),
+        name: z.string().min(1).max(200),
+        mimeType: z.string().min(1).max(100),
+      })
+      .strict()
+      .optional(),
+    href: z
+      .string()
+      .max(2000)
+      .refine(
+        (value) =>
+          value === '' ||
+          /^#[\w-]*$/.test(value) ||
+          /^\/(?!\/)[^\\\s]*$/.test(value) ||
+          /^https?:\/\/[^\s]+$/.test(value),
+      )
+      .optional(),
+    src: z
+      .string()
+      .max(2000)
+      .refine((value) => value === '' || /^\/(?!\/)[^\\\s]*$/.test(value))
+      .optional(),
   })
   .strict();
 export type UiNode = {

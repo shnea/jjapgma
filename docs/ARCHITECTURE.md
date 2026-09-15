@@ -14,6 +14,9 @@ React 웹 + NestJS 모듈형 단일 API + PostgreSQL. 기능을 파일·모듈�
 | apps/api/src/auth | OIDC, 암호화, 세션, Guard |
 | apps/api/src/projects | 프로젝트/멤버십 인가 |
 | apps/api/src/pages | 페이지/Revision 트랜잭션 |
+| apps/api/src/files | 파일 서비스 client, 업로드 검사/권한, 프로젝트 참조 검증 |
+| apps/web/src/features/editor/elements, files | 분류별 요소 렌더러, 첨부 업로드/미리보기 |
+| packages/ui-spec/src/catalog, drop.ts | 요소 분류별 정의, Canvas 드래그 삽입/이동 규칙 |
 | apps/api/src/database | 연결, 잠금 기반 마이그레이션, SQL |
 | apps/api/src/common | HTTP 입력 검증과 안전한 오류 |
 | packages/ui-spec/src/registry.ts | 등록 가능한 기본 요소와 속성 정의 |
@@ -39,6 +42,7 @@ React 웹 + NestJS 모듈형 단일 API + PostgreSQL. 기능을 파일·모듈�
 - 갱신은 세션 행 잠금으로 직렬화하고 실패 시 세션을 폐기합니다. 실제 제공자의 rotation 계약은 등록 후 검증해야 합니다.
 - AI: n8n 전용 endpoint를 사용할 예정. 앱 내 Provider 직접 호출은 구현하지 않습니다. MCP·AI 화면 수정은 후속 단계입니다.
 - 기본 미리보기는 입력·체크박스 같은 로컬 동작만 지원합니다. API Action·Binding 실행을 의미하지 않습니다.
+- 파일 본문은 외부 file-service에 저장합니다. 이미지·첨부 입력은 서버 업로드 프록시와 project_files에 연결됩니다. [파일 계약](FILE_INTEGRATION.md)과 [64종 요소 구현 수준](COMPONENT_COVERAGE.md)을 구분합니다.
 
 ## 배포와 확장
 

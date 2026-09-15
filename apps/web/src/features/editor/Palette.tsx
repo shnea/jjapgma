@@ -14,7 +14,7 @@ import {
   PanelTop,
 } from 'lucide-react';
 import { componentTypes, registry, type ComponentType } from '@jjapgma/ui-spec';
-const icons = {
+const icons: Partial<Record<ComponentType, typeof Square>> = {
   container: Square,
   stack: Columns3,
   heading: Heading,
@@ -45,17 +45,19 @@ export function Palette({
           onChange={(e) => setSearch(e.target.value)}
         />
       </label>
-      {['배치', '기본', '입력'].map((category) => (
+      <p className="palette-count">{componentTypes.length}개 요소</p>
+      {['배치', '기본', '입력', '동작', '탐색', '데이터', '피드백', '고급'].map((category) => (
         <section key={category}>
           <h3>{category}</h3>
           <div className="palette-grid">
             {componentTypes
               .filter(
                 (type) =>
-                  registry[type].category === category && registry[type].name.includes(search),
+                  registry[type].category === category &&
+                  `${registry[type].name} ${type}`.toLowerCase().includes(search.toLowerCase()),
               )
               .map((type) => {
-                const Icon = icons[type];
+                const Icon = icons[type] ?? Square;
                 return (
                   <button
                     key={type}

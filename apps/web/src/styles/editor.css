@@ -30,7 +30,7 @@
 .editor-stage {
   margin-left: auto;
   color: #8b967f;
-  font-size: 10px;
+  font-size: 12px;
   border: 1px solid var(--border);
   padding: 4px 8px;
   border-radius: 4px;
@@ -59,7 +59,7 @@
   padding: 7px;
 }
 .save-status {
-  font-size: 10px;
+  font-size: 12px;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -92,7 +92,7 @@
   min-height: 0;
 }
 .left-panel {
-  width: 232px;
+  width: 300px;
   border-right: 1px solid var(--border);
   flex-shrink: 0;
   display: flex;
@@ -118,7 +118,7 @@
 .panel-tabs > span {
   border: 0;
   background: transparent;
-  font-size: 11px;
+  font-size: 12px;
   padding: 0 2px;
   color: #929b8c;
   display: flex;
@@ -147,7 +147,7 @@
   min-width: 0;
 }
 .page-navigation select {
-  font-size: 11px;
+  font-size: 12px;
   border: 0;
   width: 100%;
   font-weight: 600;
@@ -169,7 +169,7 @@
   margin-top: 25px;
 }
 .palette h3 {
-  font-size: 10px;
+  font-size: 12px;
   color: #7f8b74;
   font-weight: 550;
   margin-bottom: 11px;
@@ -177,7 +177,7 @@
 }
 .palette-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 7px;
 }
 .palette-grid > button {
@@ -191,7 +191,7 @@
   gap: 9px;
   padding: 15px 4px 12px;
   color: #77866c;
-  font-size: 10px;
+  font-size: 12px;
 }
 .palette-grid > button:hover {
   border-color: #b1c699;
@@ -212,7 +212,7 @@
 }
 .left-panel-footer {
   padding: 14px;
-  font-size: 9px;
+  font-size: 12px;
   color: #8c9780;
   border-top: 1px solid var(--border);
   display: flex;
@@ -223,7 +223,7 @@
   display: flex;
   align-items: center;
   min-height: 34px;
-  font-size: 10px;
+  font-size: 12px;
   border: 1px solid transparent;
 }
 .layer-row.selected {
@@ -252,7 +252,7 @@
   flex: 1;
   padding: 8px 6px;
   min-width: 0;
-  font-size: 10px;
+  font-size: 12px;
 }
 .layer-select > span {
   white-space: nowrap;
@@ -272,7 +272,7 @@
   display: flex;
   justify-content: space-between;
   padding: 23px 28px 12px;
-  font-size: 10px;
+  font-size: 12px;
   color: #939e88;
   flex-shrink: 0;
 }
@@ -290,13 +290,13 @@
   min-height: 200px;
 }
 .artboard {
-  min-height: 640px;
+  min-height: 900px;
   background: white;
   box-shadow: 0 3px 15px #34402b0b;
   transform-origin: top left;
 }
 .artboard > .render-node {
-  min-height: 640px;
+  min-height: 900px;
 }
 .canvas-bottom {
   height: 38px;
@@ -306,7 +306,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 17px;
-  font-size: 9px;
+  font-size: 12px;
   color: #77866a;
   flex-shrink: 0;
 }
@@ -314,7 +314,7 @@
   border: 0;
   background: transparent;
   padding: 3px;
-  font-size: 10px;
+  font-size: 12px;
 }
 .page-name-field {
   padding: 15px 17px;
@@ -325,7 +325,7 @@
   display: flex;
   flex-direction: column;
   gap: 7px;
-  font-size: 10px;
+  font-size: 12px;
   color: #79846f;
   margin-bottom: 12px;
 }
@@ -335,7 +335,7 @@
 .page-name-field input,
 .inspector input,
 .inspector select {
-  font-size: 11px;
+  font-size: 12px;
   padding: 7px 8px;
   width: 100%;
   background: #fcfdfa;
@@ -345,7 +345,7 @@
   border-bottom: 1px solid var(--border);
 }
 .inspector h3 {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   margin-bottom: 14px;
   color: #53624a;
@@ -354,12 +354,12 @@
   display: flex;
   justify-content: space-between;
   padding: 16px 17px 0;
-  font-size: 11px;
+  font-size: 12px;
   color: #3f5035;
   font-weight: 600;
 }
 .spec-tag {
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 400;
   color: #9ca58f;
 }
@@ -388,7 +388,7 @@
   margin: 0;
 }
 .breakpoint-tag {
-  font-size: 9px;
+  font-size: 12px;
   background: #edf3e4;
   color: #71865b;
   padding: 3px 6px;
@@ -403,11 +403,11 @@
   gap: 8px;
 }
 .node-actions .button {
-  font-size: 10px;
+  font-size: 12px;
   padding: 7px 10px;
 }
 .inspector .button-ghost {
-  font-size: 10px;
+  font-size: 12px;
   padding: 7px 0;
 }
 .empty-editor {
@@ -448,4 +448,32 @@
 }
 .is-preview .canvas-workspace {
   background: #e9ede5;
+}
+.canvas-width {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.canvas-width input {
+  width: 88px;
+  padding: 5px 8px;
+  font-size: 12px;
+}
+.canvas-zoom-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.canvas-zoom-tools .button {
+  padding: 4px 8px;
+}
+.palette-count {
+  margin: 12px 0 0;
+  color: #626e55;
+  font-size: 12px;
+}
+.inspector textarea {
+  width: 100%;
+  font-size: 12px;
+  line-height: 1.6;
 }

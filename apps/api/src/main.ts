@@ -6,6 +6,7 @@ import { Database, DatabaseModule } from './database/database.js';
 import { AuthModule } from './auth/auth.module.js';
 import { ProjectsModule } from './projects/projects.module.js';
 import { PagesModule } from './pages/pages.module.js';
+import { FilesModule } from './files/files.module.js';
 import { SafeErrors } from './common/http.js';
 @Controller('api/health')
 class HealthController {
@@ -23,7 +24,7 @@ class HealthController {
   }
 }
 @Module({
-  imports: [DatabaseModule, AuthModule, ProjectsModule, PagesModule],
+  imports: [DatabaseModule, AuthModule, ProjectsModule, PagesModule, FilesModule],
   controllers: [HealthController],
 })
 class AppModule {}

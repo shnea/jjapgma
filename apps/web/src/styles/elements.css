@@ -1,0 +1,347 @@
+.render-node select {
+  display: block;
+  margin-top: 7px;
+  width: 100%;
+  font-size: inherit;
+  padding: 10px 12px;
+}
+.render-node img {
+  display: block;
+  width: 100%;
+  max-height: 480px;
+  object-fit: contain;
+}
+.render-node a {
+  color: #3d6926;
+  text-decoration: underline;
+}
+.render-grid > .drop-hint {
+  grid-column: 1 / -1;
+}
+.render-scrollArea {
+  max-height: 320px;
+  overflow: auto;
+}
+.render-splitPane > .render-node {
+  flex: 1;
+}
+.render-sidebar {
+  min-width: 220px;
+  background: #f3f5ef;
+}
+.render-header {
+  min-height: 80px;
+  border-bottom: 1px solid #dfe5d9;
+}
+.element-options label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+.element-option-list {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+.element-options.option-column .element-option-list {
+  flex-direction: column;
+}
+.element-options.option-align-center .element-option-list {
+  justify-content: center;
+}
+.element-options.option-align-right .element-option-list {
+  justify-content: flex-end;
+}
+.element-field {
+  display: flex !important;
+  gap: 8px;
+}
+.element-label-left,
+.element-label-right {
+  flex-direction: row !important;
+  align-items: center;
+}
+.element-label-left .element-field-label {
+  min-width: 100px;
+}
+.element-label-right {
+  flex-direction: row-reverse !important;
+  justify-content: flex-end;
+}
+.element-field-label {
+  flex: 0 0 auto;
+}
+.element-date-range-single {
+  margin-top: 0 !important;
+}
+.render-fab .element-icon-button {
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  justify-content: center;
+}
+.element-options input {
+  width: auto;
+  margin: 0;
+}
+.element-date-range {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.element-date-range label {
+  flex: 1;
+}
+.element-options legend,
+.element-date-range label {
+  font-size: 14px;
+}
+.element-icon-button {
+  border-radius: 50% !important;
+  padding: 14px !important;
+  display: inline-flex;
+}
+.render-toggleButton button {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+}
+.render-toggleButton button[aria-pressed='true'] {
+  background: #50792d;
+}
+.element-nav,
+.element-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.element-nav-menu {
+  flex-direction: column;
+  align-items: stretch;
+}
+.element-nav button,
+.element-tabs button {
+  background: #f0f3ec;
+  color: #3c5030;
+  border: 1px solid #dae4d1;
+}
+.element-nav button[aria-current],
+.element-tabs button[aria-selected='true'] {
+  background: #24452d;
+  color: white;
+}
+.element-nav-stepper button span {
+  margin-right: 10px;
+  font-weight: 700;
+}
+.element-nav-bottomNavigation {
+  justify-content: space-around;
+  border-top: 1px solid #dfe5d9;
+  padding-top: 12px;
+}
+.element-tab-content {
+  padding: 24px;
+  border: 1px solid #dfe5d9;
+  margin-top: 8px;
+}
+.element-breadcrumb {
+  list-style: none;
+  display: flex;
+  gap: 12px;
+  padding: 0;
+  margin: 0;
+}
+.element-breadcrumb li + li::before {
+  content: '/';
+  margin-right: 12px;
+  color: #737e69;
+}
+.element-table-scroll {
+  overflow: auto;
+}
+.element-table-scroll table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+.element-table-scroll caption {
+  text-align: left;
+  font-weight: 600;
+  padding-bottom: 14px;
+}
+.element-table-scroll th,
+.element-table-scroll td {
+  padding: 13px 16px;
+  border-bottom: 1px solid #dfe5d9;
+}
+.element-table-scroll th {
+  background: #f0f3ec;
+  font-weight: 600;
+}
+.element-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.element-list li {
+  padding: 14px;
+  border-bottom: 1px solid #dfe5d9;
+}
+.element-description {
+  margin: 0;
+}
+.element-description > div {
+  display: flex;
+  gap: 24px;
+  padding: 14px 0;
+  border-bottom: 1px solid #dfe5d9;
+}
+.element-description dt {
+  min-width: 120px;
+  font-weight: 600;
+}
+.element-description dd {
+  margin: 0;
+}
+.element-accordion details {
+  padding: 16px;
+  border: 1px solid #dfe5d9;
+}
+.element-accordion summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.element-accordion p {
+  margin-top: 16px;
+}
+.element-badge,
+.element-chip {
+  display: inline-block;
+  padding: 6px 12px;
+  background: #eaf3db;
+  color: #354f21;
+  border-radius: 6px;
+}
+.element-chip {
+  border-radius: 99px;
+}
+.element-avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #dce8c9;
+  color: #3a502b;
+  font-weight: 600;
+}
+.element-json {
+  margin: 0;
+  padding: 22px;
+  background: #f2f4ef;
+  overflow: auto;
+  font-size: 14px;
+  line-height: 1.8;
+}
+.element-alert {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid #c3d8ac;
+  background: #eff7e6;
+  border-radius: 8px;
+}
+.render-progress progress {
+  display: block;
+  width: 100%;
+  height: 16px;
+  margin-top: 12px;
+  accent-color: #62823e;
+}
+.element-loading {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.element-spinner {
+  width: 26px;
+  height: 26px;
+  border: 3px solid #dde4d4;
+  border-top-color: #567534;
+  border-radius: 50%;
+  animation: element-spin 1s linear infinite;
+}
+@keyframes element-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.element-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.element-skeleton i {
+  height: 18px;
+  background: #e9ede2;
+  border-radius: 6px;
+}
+.element-skeleton i:last-child {
+  width: 60%;
+}
+.element-state,
+.element-image-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 48px;
+  background: #f7f9f3;
+  border: 1px dashed #c9d5bd;
+  border-radius: 8px;
+  color: #526348;
+}
+.element-image-placeholder {
+  min-height: 220px;
+}
+.element-spacer {
+  height: 100%;
+  min-height: 24px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .element-spinner {
+    animation: none;
+  }
+}
+.file-upload-control {
+  display: grid;
+  gap: 8px;
+  overflow-wrap: anywhere;
+}
+.file-upload-control small {
+  font-size: 12px;
+  color: #657258;
+}
+.file-upload-control a {
+  color: #345e19;
+  text-decoration: underline;
+  font-size: 13px;
+}
+.element-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+.element-image-empty {
+  min-height: 180px;
+  background: #f2f5ee;
+  display: grid;
+  place-content: center;
+  gap: 12px;
+  padding: 24px;
+}

@@ -2,6 +2,8 @@
 
 API는 같은 origin의 `/api`. JSON 입력·응답, 최대 body 2 MiB. 변경 요청은 세션 쿠키 + 정확한 `Origin` + `X-CSRF-Token`이 필요합니다. CSRF 토큰은 로그인 후 `/api/auth/me`에서 받습니다.
 
+파일 업로드만 multipart 단일 `file`로 받으며 기본 파일 한도는 10 MiB입니다. 외부 401/413/507 및 preview 202 처리는 [파일 연동 계약](FILE_INTEGRATION.md)을 참고합니다.
+
 | Method / 경로 | 입력 | 결과 / 권한 |
 | --- | --- | --- |
 | GET `/api/auth/config` | 없음 | 개발 로그인 사용 가능 여부 |
@@ -19,6 +21,10 @@ API는 같은 origin의 `/api`. JSON 입력·응답, 최대 body 2 MiB. 변경 �
 | PUT `/api/pages/:id` | name, baseRevision(양의 정수), spec | 검증 후 새 revision; OWNER/EDITOR |
 | GET `/api/health/live` | 없음 | 프로세스 liveness |
 | GET `/api/health` | 없음 | DB 접근 확인 readiness |
+| GET `/api/files/config` | 세션 | enabled, maxBytes; 토큰 값 반환 없음 |
+| POST `/api/files/upload?projectId=<UUID>` | 세션/CSRF, multipart `file` | 외부 업로드 후 fileId/name/mimeType; OWNER/EDITOR |
+| GET `/api/projects/:id/files/:fileId/preview` | 세션/프로젝트 파일 참조 | ready/previewUrl, 외부 202는 ready=false |
+| GET `/api/projects/:id/files/:fileId/download` | 세션/프로젝트 파일 참조 | 외부 공개 다운로드 URL로 303 |
 
 오류: `{statusCode, message}`. 잘못된 입력/Spec 400, 세션 없음·만료 401, CSRF/쓰기 권한 403, 없는/접근 불가 프로젝트·페이지 404, 오래된 revision 409. 예기치 않은 서버 오류는 내부 정보 없는 500.
 
