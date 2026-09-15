@@ -70,6 +70,7 @@ export function PageEditor({
   const [savedName, setSavedName] = useState(initial.name);
   const [revision, setRevision] = useState(initial.revision);
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [error, setError] = useState('');
   const [conflict, setConflict] = useState(false);
   const inFlight = useRef(false);
@@ -119,7 +120,13 @@ export function PageEditor({
   }, [dirty, readOnly, conflict, initial.id, name, spec, revision, onSaved]);
   const [showHistory, setShowHistory] = useState(false);
   const [revisionsList, setRevisionsList] = useState<
-    Array<{ page_id: string; revision: number; name: string; author_id: string; created_at: string }>
+    Array<{
+      page_id: string;
+      revision: number;
+      name: string;
+      author_id: string;
+      created_at: string;
+    }>
   >([]);
   const [loadingRevisions, setLoadingRevisions] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
@@ -142,7 +149,13 @@ export function PageEditor({
     setLoadingRevisions(true);
     try {
       const list = await api<
-        Array<{ page_id: string; revision: number; name: string; author_id: string; created_at: string }>
+        Array<{
+          page_id: string;
+          revision: number;
+          name: string;
+          author_id: string;
+          created_at: string;
+        }>
       >(`/pages/${initial.id}/revisions`);
       setRevisionsList(list);
     } catch (e) {
@@ -491,6 +504,7 @@ export function PageEditor({
             <div className="artboard-wrap" style={{ width: (width * zoom) / 100 }}>
               <div className="artboard" style={{ width, zoom: zoom / 100 }}>
                 <NodeRenderer
+                  root
                   node={spec.root}
                   breakpoint={breakpoint}
                   selectedId={selected.id}
@@ -599,7 +613,10 @@ export function PageEditor({
               <div className="export-option-card">
                 <div className="export-option-info">
                   <h4>스토리북 내보내기 (.zip)</h4>
-                  <p>npm i && npm run storybook(6006 포트)으로 바로 실행 가능한 독립 실행 환경 ZIP 패키지를 다운로드합니다.</p>
+                  <p>
+                    npm i && npm run storybook(6006 포트)으로 바로 실행 가능한 독립 실행 환경 ZIP
+                    패키지를 다운로드합니다.
+                  </p>
                 </div>
                 <Button
                   variant="primary"
@@ -615,15 +632,27 @@ export function PageEditor({
 
               <div className="export-option-card">
                 <div className="export-option-info">
-                  <h4>HTML 내보내기 (.html)</h4>
-                  <p>브라우저에서 바로 열 수 있는 독립 실행형 단일 HTML 파일로 내보냅니다.</p>
+                  <h4>HTML + CSS + JavaScript (.zip)</h4>
+                  <p>
+                    압축을 풀고 index.html을 열면 스타일과 화면 동작이 유지됩니다. 첨부파일은 외부
+                    서비스 주소를 참조합니다.
+                  </p>
                 </div>
                 <Button
                   variant="primary"
                   aria-label="HTML 내보내기"
-                  onClick={() => {
-                    exportToHtml(name, spec);
-                    setShowExportModal(false);
+                  disabled={exporting}
+                  onClick={async () => {
+                    setExporting(true);
+                    try {
+                      await exportToHtml(name, spec, initial.project_id);
+                      setShowExportModal(false);
+                    } catch (e) {
+                      setError(errorMessage(e));
+                      setShowExportModal(false);
+                    } finally {
+                      setExporting(false);
+                    }
                   }}
                 >
                   <Globe size={14} style={{ marginRight: 6 }} /> 내보내기
@@ -683,14 +712,17 @@ export function PageEditor({
                       >
                         <div className="revision-meta">
                           <span className="revision-tag">
-                            v{rev.revision} {isCurrent && <span style={{ color: '#466e2c', fontSize: 12 }}>(현재 버전)</span>}
+                            v{rev.revision}{' '}
+                            {isCurrent && (
+                              <span style={{ color: '#466e2c', fontSize: 12 }}>(현재 버전)</span>
+                            )}
                           </span>
                           <span className="revision-time">
                             {new Date(rev.created_at).toLocaleString('ko-KR')}
                           </span>
                         </div>
                         <Button
-                          variant={isCurrent ? 'outline' : 'secondary'}
+                          variant="secondary"
                           onClick={() => void restoreRevision(rev.revision)}
                         >
                           {isCurrent ? '현재 버전으로 복원' : '이 버전으로 복원'}

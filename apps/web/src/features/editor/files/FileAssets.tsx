@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, useRef } from 'react';
 import type { UiNode } from '@jjapgma/ui-spec';
 import { api, errorMessage } from '../../../lib/api';
 import { Button } from '../../../components/ui/Button';
+import { ExportAssetsContext } from '../export/ExportAssets';
 type Attachment = NonNullable<UiNode['props']['attachment']>;
 type Assets = {
   projectId: string;
@@ -11,6 +12,7 @@ type Assets = {
 const Context = createContext<Assets | null>(null);
 export const FileAssetsProvider = Context.Provider;
 export function FileUploadControl({ node }: { node: UiNode }) {
+  const exportedAssets = useContext(ExportAssetsContext);
   const assets = useContext(Context);
   const currentAssets = useRef(assets);
   currentAssets.current = assets;
@@ -85,9 +87,12 @@ export function FileUploadControl({ node }: { node: UiNode }) {
         </small>
       )}
       {error && <p role="alert">{error}</p>}
-      {node.props.attachment && assets && (
+      {node.props.attachment && (assets || exportedAssets?.[node.id]?.download) && (
         <a
-          href={`/api/projects/${assets.projectId}/files/${encodeURIComponent(node.props.attachment.fileId)}/download`}
+          href={
+            exportedAssets?.[node.id]?.download ??
+            `/api/projects/${assets?.projectId}/files/${encodeURIComponent(node.props.attachment.fileId)}/download`
+          }
           target="_blank"
           rel="noreferrer"
         >

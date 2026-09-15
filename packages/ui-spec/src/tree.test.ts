@@ -31,6 +31,25 @@ test('responsive override preserves base and parent lock protects descendants', 
   card.responsive.mobile = { hidden: true };
   assert.equal(effectiveStyle(card, 'mobile').hidden, true);
   assert.equal(effectiveStyle(card, 'desktop').hidden, undefined);
+  assert.equal(effectiveStyle(card, 'mobile').direction, 'column');
+});
+
+test('table dimensions and date settings round trip and reject invalid bounds', () => {
+  const spec = createSpec(),
+    table = createNode('table'),
+    input = createNode('input');
+  table.props.rowCount = 200;
+  table.props.columnCount = 24;
+  table.props.pageSize = 10;
+  input.props.controlType = 'datetime-local';
+  input.props.includeTime = true;
+  spec.root.children.push(table, input);
+  assert.deepEqual(validateSpec(JSON.parse(JSON.stringify(spec))), spec);
+  table.props.rowCount = 201;
+  assert.throws(() => validateSpec(spec));
+  table.props.rowCount = 3;
+  table.props.columnCount = 0;
+  assert.throws(() => validateSpec(spec));
 });
 test('untrusted specs reject executable styles, unknown components and excessive depth', () => {
   const spec = createSpec();

@@ -1,7 +1,12 @@
 import { useState, type CSSProperties, type DragEvent } from 'react';
 import { GripVertical } from 'lucide-react';
-import { registry, type Breakpoint, type UiNode } from '@jjapgma/ui-spec';
+import { effectiveStyle, registry, type Breakpoint, type UiNode } from '@jjapgma/ui-spec';
 import { ElementContent } from './elements/ElementContent';
+
+const builderDragTypes = (types: DOMStringList | readonly string[]) =>
+  Array.from(types).some((type) => type === 'application/jjapgma' || type === 'text/plain');
+const builderDragData = (dataTransfer: DataTransfer) =>
+  dataTransfer.getData('application/jjapgma') || dataTransfer.getData('text/plain');
 
 export function NodeRenderer({
   node,
@@ -17,7 +22,7 @@ export function NodeRenderer({
 }: {
   node: UiNode;
   breakpoint: Breakpoint;
-  selectedId: string;
+  selectedId?: string;
   onSelect?: (id: string) => void;
   onDrop?: (id: string, data: string, position?: 'before' | 'inside' | 'after') => void;
   onResize?: (id: string, width: number, height: number) => void;
@@ -30,7 +35,7 @@ export function NodeRenderer({
   const [modalOpen, setModalOpen] = useState(true);
   const [modalOffset, setModalOffset] = useState({ x: 0, y: 0 });
   const container = Boolean(registry[node.type].children);
-  const value = node.responsive[breakpoint] ?? node.style;
+  const value = effectiveStyle(node, breakpoint);
   const locked = ancestorLocked || node.locked;
 
   const handleHeaderMouseDown = (e: React.MouseEvent) => {
@@ -93,7 +98,9 @@ export function NodeRenderer({
       ? {
           display: 'grid',
           gridTemplateColumns: `repeat(${value.gridColumns ?? 2}, minmax(0, 1fr))`,
-          gridTemplateRows: value.gridRows ? `repeat(${value.gridRows}, minmax(0, auto))` : undefined,
+          gridTemplateRows: value.gridRows
+            ? `repeat(${value.gridRows}, minmax(0, auto))`
+            : undefined,
         }
       : {}),
     ...(value.hidden ? { ...(preview ? { display: 'none' } : {}), opacity: 0.3 } : {}),
@@ -103,11 +110,7 @@ export function NodeRenderer({
   if ((node.type === 'modal' || node.type === 'dialog') && preview && !modalOpen) {
     return (
       <div className="render-modal-reopen-wrap" style={{ padding: '12px 0' }}>
-        <button
-          type="button"
-          className="dialog-btn primary"
-          onClick={() => setModalOpen(true)}
-        >
+        <button type="button" className="dialog-btn primary" onClick={() => setModalOpen(true)}>
           {node.props.text || '모달/다이얼로그'} 다시 열기
         </button>
       </div>
@@ -227,11 +230,12 @@ export function NodeRenderer({
         if (preview || !onDrop || root || locked) return;
         event.stopPropagation();
         event.dataTransfer.effectAllowed = 'move';
-        event.dataTransfer.setData('application/jjapgma', JSON.stringify({ id: node.id }));
-        onSelect?.(node.id);
+        const data = JSON.stringify({ id: node.id });
+        event.dataTransfer.setData('application/jjapgma', data);
+        event.dataTransfer.setData('text/plain', data);
       }}
       onDragEnd={() => setDropPosition(undefined)}
-      className={`render-node render-${node.type} ${preview ? 'preview-mode' : ''} ${selectedId === node.id && !preview ? 'node-selected' : ''}`}
+      className={`render-node render-${node.type} ${value.width === undefined || value.width === 'auto' ? 'render-size-auto' : 'render-size-fixed'} ${preview ? 'preview-mode' : ''} ${selectedId === node.id && !preview ? 'node-selected' : ''}`}
       style={style}
       onClick={
         preview
@@ -245,7 +249,7 @@ export function NodeRenderer({
         preview
           ? undefined
           : (event) => {
-              if (onDrop && event.dataTransfer.types.includes('application/jjapgma')) {
+              if (onDrop && builderDragTypes(event.dataTransfer.types)) {
                 event.stopPropagation();
                 if (locked) return;
                 event.preventDefault();
@@ -258,33 +262,44 @@ export function NodeRenderer({
           ? undefined
           : (event) => {
               setDropPosition(undefined);
-              if (onDrop && event.dataTransfer.types.includes('application/jjapgma')) {
+              if (onDrop && builderDragTypes(event.dataTransfer.types)) {
                 event.stopPropagation();
                 if (locked) return;
                 event.preventDefault();
-                onDrop(node.id, event.dataTransfer.getData('application/jjapgma'), position(event));
+                onDrop(node.id, builderDragData(event.dataTransfer), position(event));
               }
             }
       }
       onDragLeave={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null))
+        if (
+          !(event.relatedTarget instanceof Node) ||
+          !event.currentTarget.contains(event.relatedTarget)
+        )
           setDropPosition(undefined);
       }}
     >
       {selectedId === node.id && !preview && (
         <span className="node-label">
-          {!root && !locked && <GripVertical size={11} style={{ marginRight: 3, verticalAlign: 'middle', cursor: 'grab' }} />}
+          {!root && !locked && (
+            <GripVertical
+              size={11}
+              style={{ marginRight: 3, verticalAlign: 'middle', cursor: 'grab' }}
+            />
+          )}
           {node.name}
         </span>
       )}
       {container || preview ? (
         content
       ) : (
-        <div className="render-content" style={{ pointerEvents: preview ? 'auto' : 'none', width: '100%' }}>
+        <div
+          className="render-content"
+          style={{ pointerEvents: preview ? 'auto' : 'none', width: '100%' }}
+        >
           {content}
         </div>
       )}
-      {selectedId === node.id && !preview && !root && onResize && (
+      {selectedId === node.id && !preview && !root && !locked && onResize && (
         <span
           className="resize-handle resize-handle-se"
           role="button"

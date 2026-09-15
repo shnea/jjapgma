@@ -1,5 +1,35 @@
 import { test, expect } from '@playwright/test';
 import { createSpec, createNode } from '@jjapgma/ui-spec';
+import { openSpec } from './helpers';
+
+test('unselected input, selected label and palette drag into root padding at reduced zoom', async ({
+  page,
+}) => {
+  const spec = createSpec(),
+    input = createNode('input'),
+    radio = createNode('radio');
+  spec.root.children.push(input, radio);
+  await openSpec(page, spec, '루트 드롭 회귀');
+  await page.getByRole('button', { name: '화면에 맞춤' }).click();
+  const root = page.locator('.artboard > [data-node-id]'),
+    source = page.getByTestId('node-input');
+  await expect(root).toHaveAttribute('draggable', 'false');
+  const target = page.getByTestId('node-radio');
+  const bounds = (await target.boundingBox())!;
+  await source.dragTo(target, { targetPosition: { x: 10, y: bounds.height - 1 } });
+  await expect(root.locator(':scope > [data-node-id]').last()).toHaveAttribute(
+    'data-node-id',
+    input.id,
+  );
+  await source.click();
+  await source.locator('.node-label').dragTo(root, { targetPosition: { x: 3, y: 3 } });
+  await expect(page.locator('.error-banner')).toHaveCount(0);
+  const before = await root.locator(':scope > [data-node-id]').count();
+  await page
+    .getByRole('button', { name: '제목', exact: true })
+    .dragTo(root, { targetPosition: { x: 3, y: 3 } });
+  await expect(root.locator(':scope > [data-node-id]')).toHaveCount(before + 1);
+});
 test('canvas moves existing elements, persists order, respects locks and adjusts width', async ({
   page,
 }) => {

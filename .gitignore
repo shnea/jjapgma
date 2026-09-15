@@ -17,6 +17,7 @@ coverage/
 storybook-static/
 .vite/
 .cache/
+apps/web/public/export/
 *.tsbuildinfo
 *.log
 

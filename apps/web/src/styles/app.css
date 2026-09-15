@@ -3,4 +3,6 @@
 @import './editor.css';
 @import './renderer.css';
 @import './elements.css';
+@import './picker.css';
+@import './pagination.css';
 @import './responsive.css';

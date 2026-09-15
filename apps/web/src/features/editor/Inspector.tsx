@@ -39,7 +39,7 @@ export function Inspector({
   }
   function changeMobileHidden(hidden: boolean) {
     onUpdate((n) => {
-      n.responsive.mobile = { hidden };
+      n.responsive.mobile = { ...n.responsive.mobile, hidden };
     });
   }
   return (
@@ -84,6 +84,12 @@ export function Inspector({
             )}
             {propertySchema
               .filter((p) => (p.types as readonly string[]).includes(node.type))
+              .filter(
+                (p) =>
+                  p.key !== 'includeTime' ||
+                  node.type === 'dateRange' ||
+                  ['date', 'datetime-local'].includes(node.props.controlType ?? 'text'),
+              )
               .map((property) => (
                 // Keep the property catalog declarative while allowing select-only metadata.
                 <label
@@ -107,14 +113,24 @@ export function Inspector({
                     <>
                       {property.label}
                       <select
+                        aria-label={property.label}
                         value={String(
                           node.props[property.key] ??
+                            (property.key === 'includeTime' &&
+                            node.props.controlType === 'datetime-local'
+                              ? 'true'
+                              : undefined) ??
                             ('options' in property ? property.options[0]?.[0] : '') ??
                             '',
                         )}
                         onChange={(e) =>
                           onUpdate((n) =>
-                            Object.assign(n.props, { [property.key]: e.target.value }),
+                            Object.assign(n.props, {
+                              [property.key]:
+                                property.key === 'includeTime'
+                                  ? e.target.value === 'true'
+                                  : e.target.value,
+                            }),
                           )
                         }
                       >
@@ -157,12 +173,39 @@ export function Inspector({
                       {property.label}
                       <input
                         type="number"
-                        min={0}
-                        max={100}
-                        value={node.props.value ?? 60}
+                        min={'min' in property ? property.min : 0}
+                        max={'max' in property ? property.max : 100}
+                        value={
+                          node.props[property.key] ??
+                          (property.key === 'rowCount'
+                            ? Math.max(
+                                1,
+                                (node.props.items ?? '').split('\n').filter(Boolean).length - 1,
+                              )
+                            : property.key === 'columnCount'
+                              ? Math.max(
+                                  1,
+                                  ...(node.props.items ?? '')
+                                    .split('\n')
+                                    .map((row) => row.split('|').length),
+                                )
+                              : property.key === 'pageSize' && node.type === 'list'
+                                ? 4
+                                : 'defaultValue' in property
+                                  ? property.defaultValue
+                                  : 60)
+                        }
                         onChange={(e) =>
                           onUpdate((n) => {
-                            n.props.value = Math.min(100, Math.max(0, Number(e.target.value)));
+                            Object.assign(n.props, {
+                              [property.key]: Math.min(
+                                'max' in property ? property.max : 100,
+                                Math.max(
+                                  'min' in property ? property.min : 0,
+                                  Math.round(Number(e.target.value)),
+                                ),
+                              ),
+                            });
                           })
                         }
                       />
@@ -405,10 +448,18 @@ export function Inspector({
                     })
                   }
                   rows={2}
-                  style={{ width: '100%', fontSize: 12, fontFamily: 'monospace', resize: 'vertical', marginTop: 4 }}
+                  style={{
+                    width: '100%',
+                    fontSize: 12,
+                    fontFamily: 'monospace',
+                    resize: 'vertical',
+                    marginTop: 4,
+                  }}
                 />
               </label>
-              <p className="panel-help">임의의 CSS 속성을 세미콜론(;)으로 구분하여 추가할 수 있습니다.</p>
+              <p className="panel-help">
+                임의의 CSS 속성을 세미콜론(;)으로 구분하여 추가할 수 있습니다.
+              </p>
             </div>
             {breakpoint !== 'desktop' && (
               <Button

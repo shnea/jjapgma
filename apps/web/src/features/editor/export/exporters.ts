@@ -1,123 +1,26 @@
-import type { UiNode, UiSpec } from '@jjapgma/ui-spec';
+import type { UiSpec } from '@jjapgma/ui-spec';
 import { createZip } from './zip';
+import { createHtmlArchive } from './htmlExport';
 
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = filename;
+  // Some Chromium hosts discard a non-ASCII blob filename, including its extension.
+  const extension = filename.match(/\.[a-z0-9]+$/i)?.[0] ?? '';
+  const stem = filename.slice(0, filename.length - extension.length)
+    .replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'page';
+  a.download = 'jjapgma-' + stem + extension;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 export function exportToJson(pageName: string, spec: UiSpec) {
   const json = JSON.stringify(spec, null, 2);
   const blob = new Blob([json], { type: 'application/json' });
   downloadBlob(blob, `${pageName.trim() || 'page'}.json`);
-}
-
-function renderNodeToHtml(node: UiNode): string {
-  const styleStr = Object.entries(node.style || {})
-    .filter(([k, v]) => v !== undefined && k !== 'hidden')
-    .map(([k, v]) => {
-      const kebab = k.replace(/([A-Z])/g, '-$1').toLowerCase();
-      return `${kebab}:${typeof v === 'number' ? `${v}px` : v}`;
-    })
-    .join(';');
-
-  const styleAttr = styleStr ? ` style="${styleStr}"` : '';
-  const text = node.props.text || '';
-  const labelPos = node.props.labelPosition || (node.type === 'checkbox' ? 'right' : 'top');
-  const isLabelRight = labelPos === 'right';
-
-  switch (node.type) {
-    case 'container':
-    case 'card':
-      return `<div class="jjapgma-${node.type}"${styleAttr}>\n${node.children.map(renderNodeToHtml).join('\n')}\n</div>`;
-    case 'grid':
-      return `<div class="jjapgma-grid"${styleAttr}>\n${node.children.map(renderNodeToHtml).join('\n')}\n</div>`;
-    case 'heading': {
-      const tag = node.props.titleLevel || 'h2';
-      return `<${tag}${styleAttr}>${text}</${tag}>`;
-    }
-    case 'text':
-      return `<p${styleAttr}>${text}</p>`;
-    case 'button':
-      return `<button type="button" class="element-button variant-${node.props.variant || 'default'}"${styleAttr}>${text}</button>`;
-    case 'link':
-      return `<a href="${node.props.href || '#'}"${styleAttr}>${text}</a>`;
-    case 'image':
-      return `<img src="${node.props.src || 'https://via.placeholder.com/400x240?text=Image'}" alt="${text}"${styleAttr} />`;
-    case 'divider':
-      return `<hr${styleAttr} />`;
-    case 'spacer':
-      return `<div class="element-spacer"${styleAttr}></div>`;
-    case 'input': {
-      const labelSpan = `<span class="element-field-label">${text}</span>`;
-      const inputTag = `<input type="${node.props.controlType || 'text'}" placeholder="${node.props.placeholder || ''}" />`;
-      return `<div class="element-field element-label-${labelPos}"${styleAttr}>${isLabelRight ? `${inputTag}${labelSpan}` : `${labelSpan}${inputTag}`}</div>`;
-    }
-    case 'textarea': {
-      const labelSpan = `<span class="element-field-label">${text}</span>`;
-      const textareaTag = `<textarea placeholder="${node.props.placeholder || ''}"></textarea>`;
-      return `<div class="element-field element-label-${labelPos}"${styleAttr}>${isLabelRight ? `${textareaTag}${labelSpan}` : `${labelSpan}${textareaTag}`}</div>`;
-    }
-    case 'select': {
-      const options = (node.props.items || '').split('\n').filter(Boolean);
-      const labelSpan = `<span class="element-field-label">${text}</span>`;
-      const selectTag = `<select ${node.props.multiple ? 'multiple' : ''}>${options.map((o) => `<option>${o}</option>`).join('')}</select>`;
-      return `<div class="element-field element-label-${labelPos}"${styleAttr}>${isLabelRight ? `${selectTag}${labelSpan}` : `${labelSpan}${selectTag}`}</div>`;
-    }
-    case 'dateRange': {
-      const labelSpan = `<span class="element-field-label">${text}</span>`;
-      const dateControl = `<div class="element-date-range-single"><input type="text" value="2026-09-01 00:00:00.000 ~ 2026-09-15 23:59:59.999" readonly /></div>`;
-      return `<div class="element-field element-label-${labelPos}"${styleAttr}>${isLabelRight ? `${dateControl}${labelSpan}` : `${labelSpan}${dateControl}`}</div>`;
-    }
-    case 'checkbox': {
-      const labelSpan = `<span class="element-field-label">${text}</span>`;
-      const checkControl = `<label class="element-checkbox-box"><input type="checkbox" /></label>`;
-      return `<div class="element-field element-label-${labelPos}"${styleAttr}>${isLabelRight ? `${checkControl}${labelSpan}` : `${labelSpan}${checkControl}`}</div>`;
-    }
-    case 'switch': {
-      const labelSpan = `<span class="element-field-label">${text}</span>`;
-      const switchControl = `<label class="element-switch-track"><input type="checkbox" role="switch" /></label>`;
-      return `<div class="element-field element-label-${labelPos}"${styleAttr}>${isLabelRight ? `${switchControl}${labelSpan}` : `${labelSpan}${switchControl}`}</div>`;
-    }
-    case 'radio': {
-      const options = (node.props.items || '').split('\n').filter(Boolean);
-      return `<fieldset class="element-options option-${node.props.optionDirection || 'column'}"${styleAttr}><legend>${text}</legend><div class="element-option-list">${options.map((o, idx) => `<label key="${idx}"><input type="radio" name="${node.id}" /> <span>${o}</span></label>`).join('')}</div></fieldset>`;
-    }
-    case 'badge':
-    case 'chip':
-      return `<span class="element-badge shape-${node.props.shape || 'rounded'}"${styleAttr}>${text}</span>`;
-    case 'alert':
-      return `<div class="element-alert state-${node.props.stateType || 'info'}"${styleAttr}><strong>${text}</strong></div>`;
-    case 'progress': {
-      if (node.props.shape === 'circle') {
-        const val = node.props.value ?? 60;
-        return `<div class="element-progress-circle"${styleAttr}><div class="progress-ring-container"><svg width="72" height="72"><circle class="progress-ring-bg" stroke-width="5" fill="transparent" r="28" cx="36" cy="36"></circle><circle class="progress-ring-indicator" stroke-width="5" stroke-dasharray="175.9" stroke-dashoffset="${175.9 * (1 - val / 100)}" stroke-linecap="round" fill="transparent" r="28" cx="36" cy="36"></circle></svg><span class="progress-ring-text">${val}%</span></div><span class="progress-label">${text || '진행률'}</span></div>`;
-      }
-      return `<div class="render-progress"${styleAttr}><progress value="${node.props.value ?? 60}" max="100"></progress></div>`;
-    }
-    case 'skeleton':
-      return `<div class="element-skeleton"${styleAttr}><div class="skeleton-lines"><i style="width: 85%"></i><i style="width: 100%"></i><i style="width: 65%"></i></div></div>`;
-    case 'modal':
-      return `<div class="render-modal-inner"${styleAttr}><div class="modal-header-bar"><strong>${text || '모달'}</strong><span class="modal-close-btn">&times;</span></div><div class="modal-content-area">${node.children.map(renderNodeToHtml).join('\n')}</div></div>`;
-    case 'dialog':
-      return `<div class="render-dialog-inner"${styleAttr}><div class="dialog-header-bar"><strong>${text || '다이얼로그'}</strong><span class="modal-close-btn">&times;</span></div><div class="dialog-content-area">${node.children.map(renderNodeToHtml).join('\n')}</div><div class="dialog-footer-bar"><button type="button" class="dialog-btn secondary">취소</button><button type="button" class="dialog-btn primary">확인</button></div></div>`;
-    case 'table': {
-      const [header = '', ...rows] = (node.props.items || '').split('\n').filter(Boolean);
-      return `<div class="element-table-scroll"${styleAttr}><table class="table"><thead><tr>${header.split('|').map((h) => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map((r) => `<tr>${r.split('|').map((c) => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table><div class="element-pagination"><button type="button" disabled>&laquo;</button><button type="button" disabled>&lsaquo;</button><button type="button" class="active">1</button><button type="button">2</button><span class="pagination-ellipsis">&hellip;</span><button type="button">&rsaquo;</button><button type="button">&raquo;</button></div></div>`;
-    }
-    case 'list': {
-      const items = (node.props.items || '').split('\n').filter(Boolean);
-      return `<ul class="element-list"${styleAttr}>${items.map((i) => `<li>${i}</li>`).join('')}</ul>`;
-    }
-    default:
-      return `<div class="element-${node.type}"${styleAttr}>${text}\n${node.children.map(renderNodeToHtml).join('\n')}</div>`;
-  }
 }
 
 export const commonCssBundle = `
@@ -223,25 +126,12 @@ input:focus, textarea:focus, select:focus { border-color: #466e2c; }
 .skeleton-lines i { display: block; height: 16px; border-radius: 4px; background: #e2e8dc !important; background: linear-gradient(90deg, #e3ebd8 25%, #f4f8ed 50%, #e3ebd8 75%) !important; background-size: 200% 100% !important; animation: skeleton-shimmer 1.5s ease-in-out infinite !important; }
 `;
 
-export function exportToHtml(pageName: string, spec: UiSpec) {
-  const content = renderNodeToHtml(spec.root);
-  const html = `<!DOCTYPE html>
-<html lang="ko">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${pageName.trim() || '짭그마 화면 내보내기'}</title>
-  <style>
-${commonCssBundle}
-  </style>
-</head>
-<body>
-  ${content}
-</body>
-</html>`;
-
-  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-  downloadBlob(blob, `${pageName.trim() || 'page'}.html`);
+export async function exportToHtml(pageName: string, spec: UiSpec, projectId: string) {
+  const archive = await createHtmlArchive(pageName, spec, projectId);
+  downloadBlob(
+    new Blob([new Uint8Array(archive)], { type: 'application/zip' }),
+    `${pageName.trim() || 'page'}-html.zip`,
+  );
 }
 
 export function exportToStorybook(pageName: string, spec: UiSpec) {
@@ -378,6 +268,6 @@ npm run storybook
     'README.md': readmeMd,
   });
 
-  const blob = new Blob([zipData], { type: 'application/zip' });
+  const blob = new Blob([new Uint8Array(zipData)], { type: 'application/zip' });
   downloadBlob(blob, `${pageName.trim() || 'storybook-project'}.zip`);
 }

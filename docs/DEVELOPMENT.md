@@ -20,6 +20,7 @@
 ## 검증 내용
 
 - Dockerfile build: 공통 명세·API 컴파일, Vite 운영 빌드.
+- npm run build는 export.vite.config.ts로 공통 렌더러의 runtime.js/styles.css를 만든 뒤 웹을 빌드합니다. apps/web/public/export는 생성물이며 Git/Docker 입력에서 제외합니다. 운영 이미지에는 빌드 단계에서 생성된 파일이 포함됩니다.
 - test 이미지: Storybook 정적 빌드, Chromium과 OS 의존성 설치.
 - npm run lint: oxlint.
 - npm run typecheck: 공통 명세/API/웹 타입 검사.
@@ -29,6 +30,8 @@
 - 추가 회귀: 캔버스 기존 요소의 순서/부모 이동·잠금·복원, 64종 카탈로그, 첨부 업로드/한글 파일명/프로젝트 참조. 테스트 Compose의 file-service는 격리된 계약 fixture이며 개발/운영에는 포함하지 않습니다. 외부 실 연동은 별도 확인합니다.
 - npm run test:stories: 실제 Storybook 산출물의 입력·disabled·키보드·반응형과 axe 접근성 검사.
 - 산출물: test-results/의 screenshot, 실패 trace. Git에서 제외합니다.
+- 컨트롤 회귀: 달력 시·분 표시와 숨겨진 값, 오늘/취소, 표 행·열 설정 저장, 모바일 스타일 상속, 라디오 라벨 위치, 스켈레톤, 고정 화살표, 확대된 캔버스 드롭을 검사합니다.
+- HTML 내보내기는 ZIP을 풀고 offline Chromium에서 file://index.html을 열어 CSS·이미지·스크립트·반응형 동작을 검증합니다.
 
 검증 결과와 미검증 항목은 PROGRESS.md에 기록합니다. mock/개발 우회와 실제 외부 로그인 성공을 혼동하지 않습니다.
 

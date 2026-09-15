@@ -45,6 +45,8 @@ const icons: Record<ComponentType, typeof Square> = {
   container: Square,
   grid: LayoutGrid,
   card: PanelTop,
+  modal: PanelTop,
+  dialog: PanelTop,
   // 기본
   heading: Heading,
   text: Type,
@@ -124,9 +126,12 @@ export function Palette({
                     key={type}
                     disabled={disabled}
                     draggable={!disabled}
-                    onDragStart={(e) =>
-                      e.dataTransfer.setData('application/jjapgma', JSON.stringify({ type }))
-                    }
+                    onDragStart={(e) => {
+                      const data = JSON.stringify({ type });
+                      e.dataTransfer.effectAllowed = 'copy';
+                      e.dataTransfer.setData('application/jjapgma', data);
+                      e.dataTransfer.setData('text/plain', data);
+                    }}
                     onClick={() => onAdd(type)}
                     title={`${registry[type].name} 추가`}
                   >

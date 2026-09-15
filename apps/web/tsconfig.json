@@ -8,5 +8,5 @@
     "noEmit": true,
     "types": ["vite/client"]
   },
-  "include": ["src", "vite.config.ts", ".storybook"]
+  "include": ["src", "vite.config.ts", "export.vite.config.ts", ".storybook"]
 }

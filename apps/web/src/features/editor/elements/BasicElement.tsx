@@ -1,4 +1,5 @@
-import { useState, type ElementType } from 'react';
+import { useContext, useState, type ElementType } from 'react';
+import { ExportAssetsContext } from '../export/ExportAssets';
 import {
   Plus,
   Image,
@@ -23,6 +24,7 @@ import type { UiNode } from '@jjapgma/ui-spec';
 import { FileImage } from '../files/FileAssets';
 
 export function BasicElement({ node }: { node: UiNode }) {
+  const exportedAssets = useContext(ExportAssetsContext);
   const [pressed, setPressed] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
 
@@ -63,7 +65,9 @@ export function BasicElement({ node }: { node: UiNode }) {
         </span>
       );
     case 'image':
-      return node.props.attachment ? (
+      return exportedAssets?.[node.id]?.src ? (
+        <img src={exportedAssets[node.id].src} alt={node.props.text} />
+      ) : node.props.attachment ? (
         <FileImage node={node} />
       ) : node.props.src && !imageFailed ? (
         <img src={node.props.src} alt={node.props.text} onError={() => setImageFailed(true)} />
@@ -91,7 +95,7 @@ export function BasicElement({ node }: { node: UiNode }) {
           ? 'fab'
           : nodeType === 'iconButton'
             ? 'icon'
-            : node.props.variant ?? 'default';
+            : (node.props.variant ?? 'default');
       const isIconOnly = variant === 'icon' || variant === 'fab';
       const isFab = variant === 'fab';
       return (
@@ -186,7 +190,11 @@ export function BasicElement({ node }: { node: UiNode }) {
       const shape = node.props.shape ?? 'lines';
       if (shape === 'circle') {
         return (
-          <div aria-label={node.props.text} role="status" className="element-skeleton skeleton-circle-wrap">
+          <div
+            aria-label={node.props.text}
+            role="status"
+            className="element-skeleton skeleton-circle-wrap"
+          >
             <div className="skeleton-circle" />
             <div className="skeleton-lines">
               <i style={{ width: '80%' }} />
@@ -197,10 +205,16 @@ export function BasicElement({ node }: { node: UiNode }) {
       }
       if (shape === 'card') {
         return (
-          <div aria-label={node.props.text} role="status" className="element-skeleton skeleton-card-wrap">
+          <div
+            aria-label={node.props.text}
+            role="status"
+            className="element-skeleton skeleton-card-wrap"
+          >
             <div className="skeleton-thumbnail" />
-            <i style={{ width: '90%', height: 16 }} />
-            <i style={{ width: '60%' }} />
+            <div className="skeleton-lines">
+              <i style={{ width: '90%' }} />
+              <i style={{ width: '60%' }} />
+            </div>
           </div>
         );
       }
@@ -215,7 +229,7 @@ export function BasicElement({ node }: { node: UiNode }) {
     case 'emptyState':
     case 'errorState': {
       const nodeType = node.type as string;
-      const stateType = nodeType === 'errorState' ? 'error' : node.props.stateType ?? 'empty';
+      const stateType = nodeType === 'errorState' ? 'error' : (node.props.stateType ?? 'empty');
       const StateIcon =
         stateType === 'error' ? AlertCircle : stateType === 'success' ? CheckCircle2 : Inbox;
       return (

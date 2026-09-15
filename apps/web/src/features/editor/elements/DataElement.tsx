@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Loader2 } from 'lucide-react';
+import { PaginationControl } from './PaginationControl';
 import type { UiNode } from '@jjapgma/ui-spec';
 
 export const dataTypes = [
@@ -15,173 +15,6 @@ export const dataTypes = [
   'chip',
 ];
 
-function PaginationControl({
-  mode,
-  design,
-  page,
-  total,
-  onPageChange,
-}: {
-  mode?: 'none' | 'pagination' | 'infinite';
-  design?: 'numbered' | 'compact' | 'simple';
-  page: number;
-  total: number;
-  onPageChange: (p: number) => void;
-}) {
-  if (mode === 'infinite') {
-    return (
-      <div className="element-infinite-sentinel">
-        <Loader2 size={16} className="spin" />
-        <span>항목을 더 불러오는 중…</span>
-      </div>
-    );
-  }
-  if (mode !== 'pagination') return null;
-
-  const currentDesign = design ?? 'numbered';
-
-  if (currentDesign === 'compact') {
-    return (
-      <div className="element-pagination">
-        <button
-          type="button"
-          disabled={page <= 1}
-          onClick={(e) => {
-            e.stopPropagation();
-            onPageChange(Math.max(1, page - 1));
-          }}
-          aria-label="이전 페이지"
-        >
-          <ChevronLeft size={16} />
-        </button>
-        <span className="page-info">
-          {page} / {total}
-        </span>
-        <button
-          type="button"
-          disabled={page >= total}
-          onClick={(e) => {
-            e.stopPropagation();
-            onPageChange(Math.min(total, page + 1));
-          }}
-          aria-label="다음 페이지"
-        >
-          <ChevronRight size={16} />
-        </button>
-      </div>
-    );
-  }
-
-  if (currentDesign === 'simple') {
-    return (
-      <div className="element-pagination">
-        <button
-          type="button"
-          disabled={page <= 1}
-          onClick={(e) => {
-            e.stopPropagation();
-            onPageChange(Math.max(1, page - 1));
-          }}
-        >
-          이전
-        </button>
-        <span className="page-info">{page} 페이지</span>
-        <button
-          type="button"
-          disabled={page >= total}
-          onClick={(e) => {
-            e.stopPropagation();
-            onPageChange(Math.min(total, page + 1));
-          }}
-        >
-          다음
-        </button>
-      </div>
-    );
-  }
-
-  // default: numbered
-  return (
-    <div className="element-pagination">
-      <button
-        type="button"
-        disabled={page <= 1}
-        onClick={(e) => {
-          e.stopPropagation();
-          onPageChange(1);
-        }}
-        title="처음으로"
-        aria-label="처음으로"
-      >
-        <ChevronsLeft size={15} />
-      </button>
-      <button
-        type="button"
-        disabled={page <= 1}
-        onClick={(e) => {
-          e.stopPropagation();
-          onPageChange(Math.max(1, page - 1));
-        }}
-        title="이전 페이지"
-        aria-label="이전 페이지"
-      >
-        <ChevronLeft size={15} />
-      </button>
-      {(() => {
-        const getPageItems = (current: number, count: number): (number | '...')[] => {
-          if (count <= 7) return Array.from({ length: count }, (_, i) => i + 1);
-          if (current <= 4) return [1, 2, 3, 4, 5, '...', count];
-          if (current >= count - 3) return [1, '...', count - 4, count - 3, count - 2, count - 1, count];
-          return [1, '...', current - 1, current, current + 1, '...', count];
-        };
-        return getPageItems(page, total).map((item, idx) =>
-          item === '...' ? (
-            <span key={`ellipsis-${idx}`} className="pagination-ellipsis" aria-hidden="true">
-              …
-            </span>
-          ) : (
-            <button
-              key={item}
-              type="button"
-              className={page === item ? 'active' : ''}
-              onClick={(e) => {
-                e.stopPropagation();
-                onPageChange(item);
-              }}
-            >
-              {item}
-            </button>
-          ),
-        );
-      })()}
-      <button
-        type="button"
-        disabled={page >= total}
-        onClick={(e) => {
-          e.stopPropagation();
-          onPageChange(Math.min(total, page + 1));
-        }}
-        title="다음 페이지"
-        aria-label="다음 페이지"
-      >
-        <ChevronRight size={15} />
-      </button>
-      <button
-        type="button"
-        disabled={page >= total}
-        onClick={(e) => {
-          e.stopPropagation();
-          onPageChange(total);
-        }}
-        title="끝으로"
-        aria-label="끝으로"
-      >
-        <ChevronsRight size={15} />
-      </button>
-    </div>
-  );
-}
-
 export function DataElement({ node }: { node: UiNode }) {
   const [page, setPage] = useState(1);
   const items = (node.props.items ?? '').split('\n').filter(Boolean);
@@ -189,12 +22,23 @@ export function DataElement({ node }: { node: UiNode }) {
   switch (node.type as string) {
     case 'table': {
       const showHeader = node.props.showHeader !== false;
-      const [header = '', ...rows] = items;
-      const pageSize = node.props.paginationMode === 'pagination' ? 3 : rows.length || 1;
+      const [header = '', ...sourceRows] = items;
+      const columns =
+        node.props.columnCount ?? Math.max(1, ...items.map((row) => row.split('|').length));
+      const cells = (row: string) =>
+        Array.from({ length: columns }, (_, i) => row.split('|')[i] ?? '');
+      // Dimensions crop the view without deleting authored cell content.
+      const rows = Array.from(
+        { length: node.props.rowCount ?? sourceRows.length },
+        (_, i) => sourceRows[i] ?? '',
+      );
+      const pageSize =
+        node.props.paginationMode === 'pagination' ? (node.props.pageSize ?? 3) : rows.length || 1;
       const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+      const currentPage = Math.min(page, totalPages);
       const displayedRows =
         node.props.paginationMode === 'pagination'
-          ? rows.slice((page - 1) * pageSize, page * pageSize)
+          ? rows.slice((currentPage - 1) * pageSize, currentPage * pageSize)
           : rows;
 
       return (
@@ -205,7 +49,7 @@ export function DataElement({ node }: { node: UiNode }) {
               {showHeader && (
                 <thead>
                   <tr>
-                    {header.split('|').map((cell, i) => (
+                    {cells(header).map((cell, i) => (
                       <th scope="col" key={i}>
                         {cell}
                       </th>
@@ -216,7 +60,7 @@ export function DataElement({ node }: { node: UiNode }) {
               <tbody>
                 {displayedRows.map((row, i) => (
                   <tr key={i}>
-                    {row.split('|').map((cell, j) => (
+                    {cells(row).map((cell, j) => (
                       <td key={j}>{cell}</td>
                     ))}
                   </tr>
@@ -227,7 +71,7 @@ export function DataElement({ node }: { node: UiNode }) {
           <PaginationControl
             mode={node.props.paginationMode}
             design={node.props.paginationDesign}
-            page={page}
+            page={currentPage}
             total={totalPages}
             onPageChange={setPage}
           />
@@ -238,11 +82,15 @@ export function DataElement({ node }: { node: UiNode }) {
       const showHeader = Boolean(node.props.showHeader);
       const [header = '', ...bodyItems] = showHeader ? items : ['', ...items];
       const listItems = showHeader ? bodyItems : items;
-      const pageSize = node.props.paginationMode === 'pagination' ? 4 : listItems.length || 1;
+      const pageSize =
+        node.props.paginationMode === 'pagination'
+          ? (node.props.pageSize ?? 4)
+          : listItems.length || 1;
       const totalPages = Math.max(1, Math.ceil(listItems.length / pageSize));
+      const currentPage = Math.min(page, totalPages);
       const displayedItems =
         node.props.paginationMode === 'pagination'
-          ? listItems.slice((page - 1) * pageSize, page * pageSize)
+          ? listItems.slice((currentPage - 1) * pageSize, currentPage * pageSize)
           : listItems;
 
       return (
@@ -260,7 +108,7 @@ export function DataElement({ node }: { node: UiNode }) {
           <PaginationControl
             mode={node.props.paginationMode}
             design={node.props.paginationDesign}
-            page={page}
+            page={currentPage}
             total={totalPages}
             onPageChange={setPage}
           />

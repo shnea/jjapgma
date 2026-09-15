@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { UiNode } from '@jjapgma/ui-spec';
+import { PaginationControl } from './PaginationControl';
 export const navigationTypes = [
   'navbar',
   'menu',
@@ -11,10 +12,16 @@ export const navigationTypes = [
 ];
 export function NavigationElement({ node }: { node: UiNode }) {
   const [active, setActive] = useState(0);
-  const items =
-    node.type === 'pagination'
-      ? ['1', '2', '3', '4', '5']
-      : (node.props.items ?? '').split('\n').filter(Boolean);
+  if (node.type === 'pagination')
+    return (
+      <PaginationControl
+        page={active + 1}
+        total={node.props.pageCount ?? 5}
+        design={node.props.paginationDesign}
+        onPageChange={(p) => setActive(p - 1)}
+      />
+    );
+  const items = (node.props.items ?? '').split('\n').filter(Boolean);
   if (node.type === 'breadcrumb')
     return (
       <nav aria-label={node.props.text}>

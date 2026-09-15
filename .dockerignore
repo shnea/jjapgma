@@ -6,6 +6,7 @@ node_modules
 **/node_modules
 **/dist
 **/storybook-static
+apps/web/public/export
 test-results
 playwright-report
 docs
