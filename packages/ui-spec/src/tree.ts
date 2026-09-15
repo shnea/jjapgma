@@ -17,7 +17,12 @@ export function createNode(typeOrLegacy: string): UiNode {
     props: {
       text: registry[type].text,
       ...(inputTypes.includes(type) ? { placeholder: '입력해 주세요' } : {}),
-      ...(inputTypes.includes(type) ? { labelVisible: true, labelPosition: 'top' as const } : {}),
+      ...(inputTypes.includes(type)
+        ? {
+            labelVisible: true,
+            labelPosition: type === 'checkbox' ? ('right' as const) : ('top' as const),
+          }
+        : {}),
       ...(type === 'input' ? { controlType: 'text' as const } : {}),
       ...(['checkbox', 'radio'].includes(type)
         ? { optionDirection: 'column' as const, optionAlign: 'left' as const }

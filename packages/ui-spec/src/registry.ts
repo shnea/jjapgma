@@ -247,6 +247,7 @@ export const propertySchema = [
     label: '아이콘',
     editor: 'select',
     options: [
+      ['none', '아이콘 없음'],
       ['plus', '플러스'],
       ['star', '별'],
       ['heart', '하트'],

@@ -127,19 +127,33 @@ function PaginationControl({
       >
         <ChevronLeft size={15} />
       </button>
-      {Array.from({ length: total }, (_, i) => i + 1).map((p) => (
-        <button
-          key={p}
-          type="button"
-          className={page === p ? 'active' : ''}
-          onClick={(e) => {
-            e.stopPropagation();
-            onPageChange(p);
-          }}
-        >
-          {p}
-        </button>
-      ))}
+      {(() => {
+        const getPageItems = (current: number, count: number): (number | '...')[] => {
+          if (count <= 7) return Array.from({ length: count }, (_, i) => i + 1);
+          if (current <= 4) return [1, 2, 3, 4, 5, '...', count];
+          if (current >= count - 3) return [1, '...', count - 4, count - 3, count - 2, count - 1, count];
+          return [1, '...', current - 1, current, current + 1, '...', count];
+        };
+        return getPageItems(page, total).map((item, idx) =>
+          item === '...' ? (
+            <span key={`ellipsis-${idx}`} className="pagination-ellipsis" aria-hidden="true">
+              …
+            </span>
+          ) : (
+            <button
+              key={item}
+              type="button"
+              className={page === item ? 'active' : ''}
+              onClick={(e) => {
+                e.stopPropagation();
+                onPageChange(item);
+              }}
+            >
+              {item}
+            </button>
+          ),
+        );
+      })()}
       <button
         type="button"
         disabled={page >= total}

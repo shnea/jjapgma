@@ -52,9 +52,10 @@ class ProjectsController {
     const id = parse(uuid, value);
     return this.db.transaction(async (client) => {
       await projectAccess(client, id, request.identity.id, true);
+      await client.query('UPDATE audit SET project_id=NULL WHERE project_id=$1', [id]);
       await client.query('DELETE FROM projects WHERE id=$1', [id]);
       await client.query(
-        "INSERT INTO audit(user_id,project_id,action,target_id) VALUES($1,$2,'project.delete',$2)",
+        "INSERT INTO audit(user_id,project_id,action,target_id) VALUES($1,NULL,'project.delete',$2)",
         [request.identity.id, id],
       );
       return { success: true };

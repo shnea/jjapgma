@@ -35,21 +35,32 @@ const legacyInputType: Record<string, string> = {
   colorPicker: 'color',
 };
 
-function DateRangeControl({
+function CustomDatePickerControl({
   label,
   showLabel,
   labelPosition = 'top',
   disabled,
+  isRange = true,
+  withTime = true,
 }: {
   label: string;
   showLabel: boolean;
   labelPosition?: 'top' | 'left' | 'right';
   disabled?: boolean;
+  isRange?: boolean;
+  withTime?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const [range, setRange] = useState({ start: '2026-09-01', end: '2026-09-15' });
+  const [range, setRange] = useState({
+    start: '2026-09-01',
+    end: '2026-09-15',
+    startTime: '00:00:00.000',
+    endTime: '23:59:59.999',
+  });
   const [tempStart, setTempStart] = useState<string | null>('2026-09-01');
-  const [tempEnd, setTempEnd] = useState<string | null>('2026-09-15');
+  const [tempEnd, setTempEnd] = useState<string | null>(isRange ? '2026-09-15' : null);
+  const [startTime, setStartTime] = useState({ h: '00', m: '00', s: '00', ms: '000' });
+  const [endTime, setEndTime] = useState({ h: '23', m: '59', s: '59', ms: '999' });
   const [currentMonth, setCurrentMonth] = useState(new Date(2026, 8, 1));
 
   const year = currentMonth.getFullYear();
@@ -65,6 +76,11 @@ function DateRangeControl({
 
   const handleSelectDay = (day: number) => {
     const dateStr = formatDate(year, month, day);
+    if (!isRange) {
+      setTempStart(dateStr);
+      setTempEnd(null);
+      return;
+    }
     if (!tempStart || (tempStart && tempEnd)) {
       setTempStart(dateStr);
       setTempEnd(null);
@@ -80,12 +96,27 @@ function DateRangeControl({
 
   const applyRange = () => {
     if (tempStart) {
-      setRange({ start: tempStart, end: tempEnd || tempStart });
+      const sTime = `${startTime.h}:${startTime.m}:${startTime.s}.${startTime.ms}`;
+      const eTime = `${endTime.h}:${endTime.m}:${endTime.s}.${endTime.ms}`;
+      setRange({
+        start: tempStart,
+        end: isRange ? (tempEnd || tempStart) : tempStart,
+        startTime: sTime,
+        endTime: eTime,
+      });
     }
     setOpen(false);
   };
 
-  const displayValue = `${range.start} ~ ${range.end}`;
+  let displayValue = '';
+  if (isRange) {
+    displayValue = withTime
+      ? `${range.start} ${range.startTime} ~ ${range.end} ${range.endTime}`
+      : `${range.start} ~ ${range.end}`;
+  } else {
+    displayValue = withTime ? `${range.start} ${range.startTime}` : range.start;
+  }
+
   const isLabelRight = labelPosition === 'right';
   const labelClass = `element-field element-label-${labelPosition}`;
   const labelSpan = showLabel ? <span className="element-field-label">{label}</span> : null;
@@ -95,7 +126,7 @@ function DateRangeControl({
         type="text"
         readOnly
         value={displayValue}
-        placeholder="시작일 ~ 종료일"
+        placeholder={isRange ? '시작일시 ~ 종료일시' : '날짜 및 시간 선택'}
         disabled={disabled}
       />
       <Calendar size={18} className="calendar-icon" />
@@ -157,7 +188,7 @@ function DateRangeControl({
                 const isStart = tempStart === dateStr;
                 const isEnd = tempEnd === dateStr;
                 const isInRange =
-                  tempStart && tempEnd && dateStr > tempStart && dateStr < tempEnd;
+                  isRange && tempStart && tempEnd && dateStr > tempStart && dateStr < tempEnd;
                 return (
                   <button
                     key={d}
@@ -172,6 +203,88 @@ function DateRangeControl({
             </div>
           </div>
 
+          {withTime && (
+            <div className="time-picker-section">
+              <span className="time-picker-label">{isRange ? '시작 시간' : '시간 (시:분:초.ms)'}</span>
+              <div className="time-picker-row">
+                <input
+                  type="text"
+                  maxLength={2}
+                  value={startTime.h}
+                  onChange={(e) => setStartTime((t) => ({ ...t, h: e.target.value.padStart(2, '0') }))}
+                  title="시 (00~23)"
+                />
+                :
+                <input
+                  type="text"
+                  maxLength={2}
+                  value={startTime.m}
+                  onChange={(e) => setStartTime((t) => ({ ...t, m: e.target.value.padStart(2, '0') }))}
+                  title="분 (00~59)"
+                />
+                :
+                <input
+                  type="text"
+                  maxLength={2}
+                  value={startTime.s}
+                  onChange={(e) => setStartTime((t) => ({ ...t, s: e.target.value.padStart(2, '0') }))}
+                  title="초 (00~59)"
+                />
+                .
+                <input
+                  type="text"
+                  maxLength={3}
+                  className="time-ms-input"
+                  value={startTime.ms}
+                  onChange={(e) => setStartTime((t) => ({ ...t, ms: e.target.value.padStart(3, '0') }))}
+                  title="밀리초 (000~999)"
+                />
+              </div>
+
+              {isRange && (
+                <>
+                  <span className="time-picker-label" style={{ marginTop: 6 }}>
+                    종료 시간 (최대 59.999초)
+                  </span>
+                  <div className="time-picker-row">
+                    <input
+                      type="text"
+                      maxLength={2}
+                      value={endTime.h}
+                      onChange={(e) => setEndTime((t) => ({ ...t, h: e.target.value.padStart(2, '0') }))}
+                      title="시 (00~23)"
+                    />
+                    :
+                    <input
+                      type="text"
+                      maxLength={2}
+                      value={endTime.m}
+                      onChange={(e) => setEndTime((t) => ({ ...t, m: e.target.value.padStart(2, '0') }))}
+                      title="분 (00~59)"
+                    />
+                    :
+                    <input
+                      type="text"
+                      maxLength={2}
+                      value={endTime.s}
+                      onChange={(e) => setEndTime((t) => ({ ...t, s: e.target.value.padStart(2, '0') }))}
+                      title="초 (00~59)"
+                    />
+                    .
+                    <input
+                      type="text"
+                      maxLength={3}
+                      className="time-ms-input"
+                      value={endTime.ms}
+                      onChange={(e) => setEndTime((t) => ({ ...t, ms: e.target.value.padStart(3, '0') }))}
+                      title="밀리초 (000~999)"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
           <div className="popover-footer">
             <button
               type="button"
@@ -179,10 +292,11 @@ function DateRangeControl({
               onClick={() => {
                 const today = formatDate(2026, 8, 15);
                 setTempStart(today);
-                setTempEnd(today);
+                if (isRange) setTempEnd(today);
+                setEndTime({ h: '23', m: '59', s: '59', ms: '999' });
               }}
             >
-              오늘
+              59.999초 자동설정
             </button>
             <div className="footer-actions">
               <button
@@ -211,7 +325,8 @@ export function FormElement({ node }: { node: UiNode }) {
   const [checked, setChecked] = useState(false);
   const label = `${node.props.text}${node.props.required ? ' *' : ''}`;
   const showLabel = node.props.labelVisible !== false;
-  const labelPosition = node.props.labelPosition ?? 'top';
+  const labelPosition =
+    node.props.labelPosition ?? (node.type === 'checkbox' ? 'right' : 'top');
   const isLabelRight = labelPosition === 'right';
   const labelClass = `element-field element-label-${labelPosition}`;
   const common = { disabled: node.props.disabled, required: node.props.required };
@@ -298,16 +413,36 @@ export function FormElement({ node }: { node: UiNode }) {
 
   if (node.type === 'dateRange')
     return (
-      <DateRangeControl
+      <CustomDatePickerControl
         label={label}
         showLabel={showLabel}
         labelPosition={labelPosition}
         disabled={common.disabled}
+        isRange={true}
+        withTime={true}
       />
     );
 
-  let control;
   const nodeType = node.type as string;
+  const type =
+    node.type === 'input'
+      ? (node.props.controlType ?? 'text')
+      : (legacyInputType[nodeType] ?? 'text');
+
+  if (type === 'date' || type === 'time' || nodeType === 'datePicker') {
+    return (
+      <CustomDatePickerControl
+        label={label}
+        showLabel={showLabel}
+        labelPosition={labelPosition}
+        disabled={common.disabled}
+        isRange={false}
+        withTime={type === 'time' || type === 'date'}
+      />
+    );
+  }
+
+  let control;
   if (nodeType === 'textarea')
     control = <textarea placeholder={node.props.placeholder} {...common} />;
   else if (nodeType === 'select' || nodeType === 'multiSelect')

@@ -1,33 +1,58 @@
 import { useState, type CSSProperties, type DragEvent } from 'react';
+import { GripVertical } from 'lucide-react';
+import { registry, type Breakpoint, type UiNode } from '@jjapgma/ui-spec';
 import { ElementContent } from './elements/ElementContent';
-import { effectiveStyle, registry, type Breakpoint, type UiNode } from '@jjapgma/ui-spec';
+
 export function NodeRenderer({
   node,
   breakpoint,
   selectedId,
   onSelect,
   onDrop,
+  onResize,
   preview = false,
-  root = true,
+  root = false,
   ancestorLocked = false,
   horizontal = false,
-  onResize,
 }: {
   node: UiNode;
   breakpoint: Breakpoint;
-  selectedId?: string;
+  selectedId: string;
   onSelect?: (id: string) => void;
   onDrop?: (id: string, data: string, position?: 'before' | 'inside' | 'after') => void;
+  onResize?: (id: string, width: number, height: number) => void;
   preview?: boolean;
   root?: boolean;
   ancestorLocked?: boolean;
   horizontal?: boolean;
-  onResize?: (id: string, width: number, height: number) => void;
 }) {
-  const [dropPosition, setDropPosition] = useState<'before' | 'inside' | 'after'>();
-  const value = effectiveStyle(node, breakpoint);
-  const container = registry[node.type].children;
+  const [dropPosition, setDropPosition] = useState<'before' | 'inside' | 'after' | undefined>();
+  const [modalOpen, setModalOpen] = useState(true);
+  const [modalOffset, setModalOffset] = useState({ x: 0, y: 0 });
+  const container = Boolean(registry[node.type].children);
+  const value = node.responsive[breakpoint] ?? node.style;
   const locked = ancestorLocked || node.locked;
+
+  const handleHeaderMouseDown = (e: React.MouseEvent) => {
+    if (!preview) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX - modalOffset.x;
+    const startY = e.clientY - modalOffset.y;
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      setModalOffset({
+        x: moveEvent.clientX - startX,
+        y: moveEvent.clientY - startY,
+      });
+    };
+    const handleMouseUp = () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  };
+
   function position(event: DragEvent<HTMLDivElement>): 'before' | 'inside' | 'after' {
     if (root) return 'inside';
     const bounds = event.currentTarget.getBoundingClientRect();
@@ -74,6 +99,21 @@ export function NodeRenderer({
     ...(value.hidden ? { ...(preview ? { display: 'none' } : {}), opacity: 0.3 } : {}),
     ...parseCustomCss(node.props.customCss),
   };
+
+  if ((node.type === 'modal' || node.type === 'dialog') && preview && !modalOpen) {
+    return (
+      <div className="render-modal-reopen-wrap" style={{ padding: '12px 0' }}>
+        <button
+          type="button"
+          className="dialog-btn primary"
+          onClick={() => setModalOpen(true)}
+        >
+          {node.props.text || '모달/다이얼로그'} 다시 열기
+        </button>
+      </div>
+    );
+  }
+
   const innerContent = container ? (
     node.children.length ? (
       node.children.map((child) => (
@@ -97,24 +137,79 @@ export function NodeRenderer({
   ) : (
     <ElementContent node={node} />
   );
+
+  const modalTransformStyle: CSSProperties =
+    preview && (modalOffset.x || modalOffset.y)
+      ? { transform: `translate(${modalOffset.x}px, ${modalOffset.y}px)` }
+      : {};
+
   const content =
     node.type === 'modal' ? (
-      <div className="render-modal-inner">
-        <div className="modal-header-bar">
+      <div className="render-modal-inner" style={modalTransformStyle}>
+        <div
+          className="modal-header-bar"
+          onMouseDown={handleHeaderMouseDown}
+          style={{ cursor: preview ? 'grab' : 'default' }}
+          title={preview ? '드래그하여 이동' : undefined}
+        >
           <strong>{node.props.text || '모달 대화상자'}</strong>
-          <span className="modal-close-btn" aria-hidden="true">×</span>
+          <button
+            type="button"
+            className="modal-close-btn"
+            aria-label="닫기"
+            onClick={(e) => {
+              e.stopPropagation();
+              setModalOpen(false);
+            }}
+          >
+            ×
+          </button>
         </div>
         <div className="modal-content-area">{innerContent}</div>
       </div>
     ) : node.type === 'dialog' ? (
-      <div className="render-dialog-inner">
-        <div className="dialog-header-bar">
+      <div className="render-dialog-inner" style={modalTransformStyle}>
+        <div
+          className="dialog-header-bar"
+          onMouseDown={handleHeaderMouseDown}
+          style={{ cursor: preview ? 'grab' : 'default' }}
+          title={preview ? '드래그하여 이동' : undefined}
+        >
           <strong>{node.props.text || '다이얼로그'}</strong>
+          <button
+            type="button"
+            className="modal-close-btn"
+            aria-label="닫기"
+            onClick={(e) => {
+              e.stopPropagation();
+              setModalOpen(false);
+            }}
+          >
+            ×
+          </button>
         </div>
         <div className="dialog-content-area">{innerContent}</div>
         <div className="dialog-footer-bar">
-          <button type="button" className="dialog-btn secondary">취소</button>
-          <button type="button" className="dialog-btn primary">확인</button>
+          <button
+            type="button"
+            className="dialog-btn secondary"
+            onClick={(e) => {
+              e.stopPropagation();
+              setModalOpen(false);
+            }}
+          >
+            취소
+          </button>
+          <button
+            type="button"
+            className="dialog-btn primary"
+            onClick={(e) => {
+              e.stopPropagation();
+              setModalOpen(false);
+            }}
+          >
+            확인
+          </button>
         </div>
       </div>
     ) : (
@@ -126,6 +221,7 @@ export function NodeRenderer({
       data-testid={`node-${node.type}`}
       data-drop-position={dropPosition}
       data-drop-axis={horizontal ? 'horizontal' : 'vertical'}
+      data-preview={preview ? 'true' : undefined}
       draggable={!preview && !!onDrop && !root && !locked}
       onDragStart={(event) => {
         if (preview || !onDrop || root || locked) return;
@@ -135,7 +231,7 @@ export function NodeRenderer({
         onSelect?.(node.id);
       }}
       onDragEnd={() => setDropPosition(undefined)}
-      className={`render-node render-${node.type} ${selectedId === node.id && !preview ? 'node-selected' : ''}`}
+      className={`render-node render-${node.type} ${preview ? 'preview-mode' : ''} ${selectedId === node.id && !preview ? 'node-selected' : ''}`}
       style={style}
       onClick={
         preview
@@ -175,11 +271,16 @@ export function NodeRenderer({
           setDropPosition(undefined);
       }}
     >
-      {selectedId === node.id && !preview && <span className="node-label">{node.name}</span>}
+      {selectedId === node.id && !preview && (
+        <span className="node-label">
+          {!root && !locked && <GripVertical size={11} style={{ marginRight: 3, verticalAlign: 'middle', cursor: 'grab' }} />}
+          {node.name}
+        </span>
+      )}
       {container || preview ? (
         content
       ) : (
-        <div className="render-content">
+        <div className="render-content" style={{ pointerEvents: preview ? 'auto' : 'none', width: '100%' }}>
           {content}
         </div>
       )}

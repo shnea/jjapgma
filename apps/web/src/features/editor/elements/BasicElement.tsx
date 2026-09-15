@@ -102,7 +102,7 @@ export function BasicElement({ node }: { node: UiNode }) {
           aria-pressed={pressed}
           onClick={() => setPressed((v) => !v)}
         >
-          {node.props.iconName && (
+          {node.props.iconName && node.props.iconName !== 'none' && (
             <span className="button-icon-wrapper">
               <Icon size={isFab ? 24 : 16} />
             </span>
