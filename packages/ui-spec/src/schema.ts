@@ -20,6 +20,7 @@ export const styleSchema = z
     textAlign: z.enum(['left', 'center', 'right', 'justify']).optional(),
     gridColumns: z.number().int().min(1).max(12).optional(),
     gridRows: z.number().int().min(1).max(50).optional(),
+    overflow: z.enum(['visible', 'auto', 'hidden']).optional(),
     hidden: z.boolean().optional(),
   })
   .strict();
@@ -35,8 +36,25 @@ export const propsSchema = z
     optionDirection: z.enum(['row', 'column']).optional(),
     optionAlign: z.enum(['left', 'center', 'right']).optional(),
     controlType: z
-      .enum(['text', 'password', 'number', 'search', 'date', 'time', 'color', 'range'])
+      .enum([
+        'text',
+        'password',
+        'number',
+        'search',
+        'email',
+        'tel',
+        'url',
+        'date',
+        'time',
+        'color',
+        'range',
+        'otp',
+      ])
       .optional(),
+    multiple: z.boolean().optional(),
+    shape: z.enum(['rounded', 'pill']).optional(),
+    stateType: z.enum(['empty', 'error', 'success']).optional(),
+    variant: z.enum(['default', 'outline', 'ghost', 'icon', 'fab']).optional(),
     titleLevel: z.enum(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']).optional(),
     iconName: z.string().max(60).optional(),
     value: z.number().min(0).max(100).optional(),

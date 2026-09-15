@@ -224,9 +224,37 @@
   background: #eaf3db;
   color: #354f21;
   border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
 }
-.element-chip {
+.element-chip,
+.element-badge.shape-pill {
   border-radius: 99px;
+}
+.element-button.variant-outline {
+  background: transparent;
+  border: 1px solid currentColor;
+}
+.element-button.variant-ghost {
+  background: transparent;
+  border: none;
+}
+.element-button.element-fab {
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+.element-state.state-error {
+  color: #b42318;
+}
+.element-state.state-success {
+  color: #027a48;
 }
 .element-avatar {
   display: inline-grid;

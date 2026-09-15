@@ -50,6 +50,7 @@ export function NodeRenderer({
     alignItems: value.align,
     justifyContent: value.justify,
     textAlign: value.textAlign,
+    overflow: value.overflow,
     ...(container ? { display: 'flex' } : {}),
     ...(node.type === 'grid'
       ? {

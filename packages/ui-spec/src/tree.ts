@@ -1,9 +1,14 @@
-import { registry, type ComponentType } from './registry.js';
+import { registry, legacyTypeAliases, type ComponentType } from './registry.js';
 import { nodeId } from './id.js';
 import { inputTypes, optionTypes } from './catalog/forms.js';
 import { horizontalTypes } from './catalog/layout.js';
 import { validateSpec, type UiNode, type UiSpec, type Breakpoint } from './schema.js';
-export function createNode(type: ComponentType): UiNode {
+export function createNode(typeOrLegacy: string): UiNode {
+  const legacy = legacyTypeAliases[typeOrLegacy];
+  const type = (legacy ? legacy.type : typeOrLegacy) as ComponentType;
+  if (!registry[type]) {
+    throw new Error(`지원하지 않는 요소 종류: ${typeOrLegacy}`);
+  }
   return {
     id: nodeId(),
     type,
@@ -13,6 +18,7 @@ export function createNode(type: ComponentType): UiNode {
       text: registry[type].text,
       ...(inputTypes.includes(type) ? { placeholder: '입력해 주세요' } : {}),
       ...(inputTypes.includes(type) ? { labelVisible: true, labelPosition: 'top' as const } : {}),
+      ...(type === 'input' ? { controlType: 'text' as const } : {}),
       ...(['checkbox', 'radio'].includes(type)
         ? { optionDirection: 'column' as const, optionAlign: 'left' as const }
         : {}),
@@ -22,10 +28,16 @@ export function createNode(type: ComponentType): UiNode {
             items:
               type === 'table'
                 ? '이름|상태|역할\n홍길동|활성|편집자\n김민수|활성|뷰어'
-                : '첫 번째 항목\n두 번째 항목\n세 번째 항목',
+                : type === 'descriptionList'
+                  ? '이름|홍길동\n이메일|user@example.com\n상태|활성'
+                  : '첫 번째 항목\n두 번째 항목\n세 번째 항목',
           }
         : {}),
       ...(type === 'link' ? { href: '#details' } : {}),
+      ...(type === 'badge' ? { shape: 'rounded' as const } : {}),
+      ...(type === 'emptyState' ? { stateType: 'empty' as const } : {}),
+      ...(type === 'button' ? { variant: 'default' as const } : {}),
+      ...(legacy?.props ?? {}),
     },
     style: registry[type].children
       ? {
@@ -34,6 +46,7 @@ export function createNode(type: ComponentType): UiNode {
           padding: 24,
           ...(type === 'card' ? { background: '#ffffff', radius: 12 } : {}),
           ...(type === 'grid' ? { gridColumns: 2, gridRows: 1 } : {}),
+          ...(legacy?.style ?? {}),
         }
       : type === 'spacer'
         ? { height: '48px' }

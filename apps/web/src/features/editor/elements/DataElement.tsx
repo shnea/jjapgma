@@ -1,15 +1,18 @@
 import type { UiNode } from '@jjapgma/ui-spec';
+
 export const dataTypes = [
   'table',
   'list',
-  'keyValue',
   'descriptionList',
   'badge',
-  'chip',
   'avatar',
   'accordion',
   'jsonViewer',
+  // legacy fallback
+  'keyValue',
+  'chip',
 ];
+
 export function DataElement({ node }: { node: UiNode }) {
   const items = (node.props.items ?? '').split('\n').filter(Boolean);
   switch (node.type) {
@@ -49,8 +52,8 @@ export function DataElement({ node }: { node: UiNode }) {
           ))}
         </ul>
       );
-    case 'keyValue':
     case 'descriptionList':
+    case 'keyValue':
       return (
         <dl className="element-description">
           {items.map((item, i) => {
@@ -82,8 +85,14 @@ export function DataElement({ node }: { node: UiNode }) {
         </span>
       );
     case 'badge':
-    case 'chip':
-      return <span className={`element-${node.type}`}>{node.props.text}</span>;
+    case 'chip': {
+      const isPill = node.type === 'chip' || node.props.shape === 'pill';
+      return (
+        <span className={`element-badge ${isPill ? 'shape-pill' : 'shape-rounded'}`}>
+          {node.props.text}
+        </span>
+      );
+    }
     case 'jsonViewer': {
       let text = node.props.text;
       try {
@@ -98,6 +107,6 @@ export function DataElement({ node }: { node: UiNode }) {
       );
     }
     default:
-      throw new Error('지원하지 않는 데이터 요소');
+      throw new Error(`지원하지 않는 데이터 요소: ${node.type}`);
   }
 }

@@ -1,41 +1,42 @@
-const input = (name: string, text: string, icon = 'text-cursor-input') => ({
+const form = (name: string, text = '입력해 주세요', icon = 'text-cursor-input') => ({
   name,
-  text,
   category: '입력',
   children: false,
+  text,
   icon,
 });
+
 export const formComponents = {
-  password: input('비밀번호', '비밀번호'),
-  number: input('숫자 입력', '수량'),
-  search: input('검색창', '검색'),
-  select: input('선택 목록', '옵션 선택'),
-  multiSelect: input('다중 선택', '옵션 선택'),
-  radio: input('라디오 그룹', '선택 항목'),
-  switch: input('스위치', '알림 받기'),
-  slider: input('슬라이더', '값 조정'),
-  date: input('날짜 선택', '날짜'),
-  time: input('시간 선택', '시간'),
-  dateRange: input('날짜 범위', '기간'),
-  fileUpload: input('파일 업로드', '파일'),
-  otp: input('인증번호', '인증번호'),
-  colorPicker: input('색상 선택', '색상'),
+  input: form('입력창', '이름', 'text-cursor-input'),
+  textarea: form('여러 줄 입력', '메시지', 'align-left'),
+  select: form('선택 목록', '옵션 선택', 'list-filter'),
+  checkbox: form('체크박스', '동의합니다', 'check-square'),
+  radio: form('라디오 그룹', '선택 항목', 'circle-dot'),
+  switch: form('스위치', '알림 받기', 'toggle-left'),
+  dateRange: form('날짜 범위', '기간', 'calendar'),
+  fileUpload: form('파일 업로드', '파일', 'upload'),
 } as const;
-export const inputTypes = ['input', 'textarea', ...Object.keys(formComponents), 'checkbox'];
+
+export const inputTypes = [
+  'input',
+  'textarea',
+  'select',
+  'checkbox',
+  'radio',
+  'switch',
+  'dateRange',
+  'fileUpload',
+];
+
 export const optionTypes = [
   'select',
-  'multiSelect',
   'radio',
-  'dropdownButton',
-  'menu',
   'navbar',
   'tabs',
   'breadcrumb',
   'stepper',
-  'bottomNavigation',
-  'list',
   'table',
-  'keyValue',
+  'list',
   'descriptionList',
   'accordion',
 ];

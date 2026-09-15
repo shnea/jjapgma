@@ -231,6 +231,17 @@ export function Inspector({
                   </select>
                 </label>
                 <label>
+                  스크롤
+                  <select
+                    value={style.overflow ?? 'visible'}
+                    onChange={(e) => changeStyle('overflow', e.target.value)}
+                  >
+                    <option value="visible">내용에 맞춤 (기본)</option>
+                    <option value="auto">넘칠 때 스크롤</option>
+                    <option value="hidden">넘침 숨김</option>
+                  </select>
+                </label>
+                <label>
                   정렬
                   <select
                     value={style.align ?? 'stretch'}

@@ -10,13 +10,16 @@ import {
   X,
   AlertCircle,
   Inbox,
+  CheckCircle2,
 } from 'lucide-react';
 import type { UiNode } from '@jjapgma/ui-spec';
 import { FileImage } from '../files/FileAssets';
+
 export function BasicElement({ node }: { node: UiNode }) {
   const [pressed, setPressed] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
-  const Icon = ({ size = 28 }: { size?: number }) => {
+
+  const Icon = ({ size = 20 }: { size?: number }) => {
     const icons = {
       plus: Plus,
       star: Star,
@@ -29,21 +32,21 @@ export function BasicElement({ node }: { node: UiNode }) {
     const Component = icons[node.props.iconName as keyof typeof icons] ?? Star;
     return <Component size={size} />;
   };
+
   switch (node.type) {
     case 'heading': {
       const Tag = (node.props.titleLevel ?? 'h2') as ElementType;
       return <Tag>{node.props.text}</Tag>;
     }
     case 'text':
-      return <p>{node.props.text}</p>;
     case 'label':
-      return <span>{node.props.text}</span>;
+      return <p className="element-text">{node.props.text}</p>;
     case 'link':
       return <a href={node.props.href || '#'}>{node.props.text}</a>;
     case 'icon':
       return (
         <span role="img" aria-label={node.props.text}>
-          <Icon />
+          <Icon size={28} />
         </span>
       );
     case 'image':
@@ -62,35 +65,30 @@ export function BasicElement({ node }: { node: UiNode }) {
     case 'divider':
       return <hr />;
     case 'button':
-      return (
-        <button type="button" disabled={node.props.disabled}>
-          {node.props.text}
-        </button>
-      );
     case 'iconButton':
     case 'fab':
+    case 'toggleButton': {
+      const variant =
+        node.type === 'fab'
+          ? 'fab'
+          : node.type === 'iconButton'
+            ? 'icon'
+            : node.props.variant ?? 'default';
+      const isIconOnly = variant === 'icon' || variant === 'fab';
+      const isFab = variant === 'fab';
       return (
         <button
-          className="element-icon-button"
           type="button"
-          aria-label={node.props.text}
+          className={`element-button variant-${variant} ${isFab ? 'element-fab' : ''} ${isIconOnly ? 'element-icon-button' : ''}`}
           disabled={node.props.disabled}
-        >
-          <Icon size={24} />
-        </button>
-      );
-    case 'toggleButton':
-      return (
-        <button
-          type="button"
           aria-pressed={pressed}
-          disabled={node.props.disabled}
           onClick={() => setPressed((v) => !v)}
         >
-          <Icon size={16} />
-          {node.props.text}
+          {node.props.iconName && <Icon size={isFab ? 24 : 16} />}
+          {!isIconOnly && <span>{node.props.text}</span>}
         </button>
       );
+    }
     case 'dropdownButton':
       return (
         <label>
@@ -132,13 +130,17 @@ export function BasicElement({ node }: { node: UiNode }) {
         </div>
       );
     case 'emptyState':
-    case 'errorState':
+    case 'errorState': {
+      const stateType = node.type === 'errorState' ? 'error' : node.props.stateType ?? 'empty';
+      const StateIcon =
+        stateType === 'error' ? AlertCircle : stateType === 'success' ? CheckCircle2 : Inbox;
       return (
-        <div className="element-state">
-          {node.type === 'emptyState' ? <Inbox size={36} /> : <AlertCircle size={36} />}
+        <div className={`element-state state-${stateType}`}>
+          <StateIcon size={36} />
           <p>{node.props.text}</p>
         </div>
       );
+    }
     default:
       throw new Error(`렌더러가 없는 요소: ${node.type}`);
   }

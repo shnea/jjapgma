@@ -1,19 +1,15 @@
-const layout = (name: string, category = '배치', icon = 'square') => ({
+const layout = (name: string, icon = 'square') => ({
   name,
-  category,
+  category: '배치',
   children: true,
   text: '',
   icon,
 });
+
 export const layoutComponents = {
-  row: layout('행', '배치', 'columns'),
-  column: layout('열'),
-  grid: layout('그리드'),
-  section: layout('섹션'),
-  scrollArea: layout('스크롤 영역'),
-  splitPane: layout('분할 영역'),
-  buttonGroup: layout('버튼 그룹', '동작'),
-  header: layout('헤더', '탐색'),
-  sidebar: layout('사이드바', '탐색'),
+  container: layout('컨테이너', 'square'),
+  grid: layout('그리드', 'layout-grid'),
+  card: layout('카드', 'panel-top'),
 } as const;
-export const horizontalTypes = ['stack', 'row', 'grid', 'splitPane', 'header', 'buttonGroup'];
+
+export const horizontalTypes = ['grid'];

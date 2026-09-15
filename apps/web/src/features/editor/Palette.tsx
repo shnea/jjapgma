@@ -6,26 +6,86 @@ import {
   Type,
   Heading,
   MousePointer2,
-  Columns3,
+  LayoutGrid,
   TextCursorInput,
   AlignLeft,
   SquareCheck,
   Minus,
   PanelTop,
+  Link as LinkIcon,
+  Star,
+  Image as ImageIcon,
+  MoveVertical,
+  ListFilter,
+  CircleDot,
+  ToggleLeft,
+  Calendar,
+  Upload,
+  FolderKanban,
+  ChevronRight,
+  Hash,
+  ListOrdered,
+  Table,
+  List,
+  FileText,
+  Tag,
+  User,
+  ChevronsUpDown,
+  AlertCircle,
+  Loader2,
+  Loader,
+  Box,
+  Inbox,
+  Code2,
 } from 'lucide-react';
 import { componentTypes, registry, type ComponentType } from '@jjapgma/ui-spec';
-const icons: Partial<Record<ComponentType, typeof Square>> = {
+
+const icons: Record<ComponentType, typeof Square> = {
+  // 배치
   container: Square,
-  stack: Columns3,
+  grid: LayoutGrid,
+  card: PanelTop,
+  // 기본
   heading: Heading,
   text: Type,
   button: MousePointer2,
+  link: LinkIcon,
+  icon: Star,
+  image: ImageIcon,
+  divider: Minus,
+  spacer: MoveVertical,
+  // 입력
   input: TextCursorInput,
   textarea: AlignLeft,
+  select: ListFilter,
   checkbox: SquareCheck,
-  divider: Minus,
-  card: PanelTop,
+  radio: CircleDot,
+  switch: ToggleLeft,
+  dateRange: Calendar,
+  fileUpload: Upload,
+  // 탐색
+  navbar: PanelTop,
+  tabs: FolderKanban,
+  breadcrumb: ChevronRight,
+  pagination: Hash,
+  stepper: ListOrdered,
+  // 데이터
+  table: Table,
+  list: List,
+  descriptionList: FileText,
+  badge: Tag,
+  avatar: User,
+  accordion: ChevronsUpDown,
+  // 피드백
+  alert: AlertCircle,
+  progress: Loader2,
+  spinner: Loader,
+  skeleton: Box,
+  emptyState: Inbox,
+  // 고급
+  jsonViewer: Code2,
 };
+
 export function Palette({
   onAdd,
   disabled,
@@ -46,17 +106,18 @@ export function Palette({
         />
       </label>
       <p className="palette-count">{componentTypes.length}개 요소</p>
-      {['배치', '기본', '입력', '동작', '탐색', '데이터', '피드백', '고급'].map((category) => (
-        <section key={category}>
-          <h3>{category}</h3>
-          <div className="palette-grid">
-            {componentTypes
-              .filter(
-                (type) =>
-                  registry[type].category === category &&
-                  `${registry[type].name} ${type}`.toLowerCase().includes(search.toLowerCase()),
-              )
-              .map((type) => {
+      {['배치', '기본', '입력', '탐색', '데이터', '피드백', '고급'].map((category) => {
+        const filtered = componentTypes.filter(
+          (type) =>
+            registry[type].category === category &&
+            `${registry[type].name} ${type}`.toLowerCase().includes(search.toLowerCase()),
+        );
+        if (filtered.length === 0) return null;
+        return (
+          <section key={category}>
+            <h3>{category}</h3>
+            <div className="palette-grid">
+              {filtered.map((type) => {
                 const Icon = icons[type] ?? Square;
                 return (
                   <button
@@ -75,9 +136,10 @@ export function Palette({
                   </button>
                 );
               })}
-          </div>
-        </section>
-      ))}
+            </div>
+          </section>
+        );
+      })}
       <p className="panel-help">끌어서 배치하거나 클릭해 선택한 영역에 추가하세요.</p>
     </div>
   );

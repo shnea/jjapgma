@@ -1,36 +1,20 @@
-# 요소 구현 범위
+# 요소 구현 및 통합 정리
 
-기준: `base.md`의 9.2 요소 목록. 현재 Registry에 **64종**이 있으며 추가·속성 편집·JSON 저장·동일 렌더러 미리보기에 연결되어 있습니다. 전체 요구의 완료를 뜻하지 않습니다.
+팔레트의 과도한 껍데기 요소(비밀번호, 숫자, 검색, 행/열, 스크롤영역, 키와값 등)를 본질적인 UI 컴포넌트로 통합하고, 세부 변형과 유형을 **우측 속성 패널(Inspector)**에서 직관적으로 제어하도록 리팩터링했습니다.
 
-| 분류 | 현재 추가할 수 있는 요소 |
-| --- | --- |
-| 배치 | 영역, 가로 배치(Stack), 행, 열, 그리드, 섹션, 카드, 스크롤 영역, 분할 영역 |
-| 기본 | 제목, 텍스트, 라벨, 링크, 아이콘, 이미지, 구분선, 여백, 버튼 |
-| 입력 | 입력창, 여러 줄 입력, 체크박스, 비밀번호, 숫자, 검색, 선택, 다중 선택, 라디오, 스위치, 슬라이더, 날짜, 시간, 날짜 범위, 파일 업로드, 인증번호, 색상 선택 |
-| 동작 | 아이콘 버튼, 토글 버튼, 드롭다운 버튼, 플로팅 버튼, 버튼 그룹 |
-| 탐색 | 헤더, 사이드바, 내비게이션 바, 메뉴, 탭, 경로 표시, 페이지 번호, 단계 표시, 하단 탐색 |
-| 데이터 | 테이블, 목록, 키와 값, 설명 목록, 배지, 칩, 아바타, 아코디언 |
-| 피드백 | 알림, 진행률, 로딩 표시, 스켈레톤, 빈 상태, 오류 상태 |
-| 고급 | JSON 보기 |
+현재 Registry에는 **정리된 36종의 핵심 요소**가 등록되어 있으며, 기존 64종 스펙과의 하위 호환성을 위해 `legacyTypeAliases`를 제공합니다.
 
-## 현재 동작과 한계
+| 분류 | 정리된 요소 목록 (36종) | 주요 통합 및 속성 제어 내용 |
+| --- | --- | --- |
+| **배치 (Layout)** | `container`(컨테이너), `grid`(그리드), `card`(카드) | `row`, `column`, `stack`, `section`, `scrollArea`, `splitPane`을 통합. `direction`(가로/세로), `overflow`(스크롤/숨김), `gap`, `padding`을 속성창에서 제어 |
+| **기본 (Basic)** | `heading`(제목), `text`(본문 텍스트), `button`(버튼), `link`(링크), `icon`(아이콘), `image`(이미지), `divider`(구분선), `spacer`(여백) | `iconButton`, `toggleButton`, `fab`을 `button`의 `variant`(기본/아웃라인/고스트/아이콘/FAB) 및 아이콘 설정으로 통합. `label`을 `text`로 통합 |
+| **입력 (Form)** | `input`(입력창), `textarea`(여러 줄 입력), `select`(선택 목록), `checkbox`(체크박스), `radio`(라디오 그룹), `switch`(스위치), `dateRange`(날짜 범위), `fileUpload`(파일 업로드) | `password`, `number`, `search`, `date`, `time`, `color`, `range`, `otp`를 `input`의 `controlType` 속성으로 통합. `multiSelect`를 `select`의 `multiple` 체크박스로 통합 |
+| **탐색 (Navigation)** | `navbar`(내비게이션 바), `tabs`(탭), `breadcrumb`(경로 표시), `pagination`(페이지 번호), `stepper`(단계 표시) | `header`, `sidebar`, `menu`, `bottomNavigation`을 `navbar`의 방향 및 아이템 구성으로 통합 |
+| **데이터 (Data)** | `table`(테이블), `list`(목록), `descriptionList`(설명 목록), `badge`(배지), `avatar`(아바타), `accordion`(아코디언) | `keyValue`를 `descriptionList`로 통합. `chip`을 `badge`의 `shape`(기본 라운드 / 알약형 Pill) 속성으로 통합 |
+| **피드백 (Feedback)** | `alert`(알림), `progress`(진행률), `spinner`(로딩 표시), `skeleton`(스켈레톤), `emptyState`(상태 화면) | `errorState`를 `emptyState`의 `stateType`(빈 상태 / 오류 / 완료) 속성으로 통합 |
+| **고급 (Advanced)** | `jsonViewer`(JSON 보기) | 읽기 전용 JSON 뷰어 |
 
-- 입력은 기본 HTML 컨트롤입니다. 탭 키보드 전환, 선택·체크·토글, 아코디언 펼치기를 지원합니다. 입력값을 업무 DB에 제출하는 Action/Binding은 후속입니다.
-- 항목은 줄바꿈으로 편집합니다. 테이블 첫 줄은 머리글, `|`는 열 구분자입니다. 정렬·필터·서버 페이지 처리와 DataGrid는 미구현입니다.
-- 탭·메뉴·페이지 번호는 로컬 선택 상태를 보여줍니다. 탭별 자식 트리·페이지 라우팅·업무 동작 연결은 후속입니다. JSON Viewer는 읽기 표시입니다.
-- 그리드는 가로 2열/세로 1열입니다. 분할 영역의 드래그 비율 조정은 후속입니다. 아이콘·아바타는 기본 아이콘·이니셜을 표시합니다.
-- 이미지/파일은 외부 file-service를 사용합니다. [파일 연동](FILE_INTEGRATION.md)의 미확인 계약을 참고합니다.
-- 캔버스 드래그는 배치 방향을 따르는 순서 변경과 다른 영역으로 이동입니다. 임의 x/y 좌표·드래그 크기 조절·스냅·다중 선택은 미구현입니다.
-- 입력 계열에는 라벨 표시 여부와 위/왼쪽/오른쪽 배치, 모바일 숨김을 제공하며, `input`은 일반/비밀번호/숫자/검색/날짜/시간/색상/범위 입력으로 바꿀 수 있습니다. 라디오·체크박스는 세로/가로와 좌/중/우 정렬을 제공합니다.
-- 제목 단계(H1–H6), 아이콘 선택, 색상 코드 입력, 그리드 열/행 수를 편집할 수 있습니다. 선택된 요소는 우측 하단 핸들로 현재 breakpoint의 고정 너비/높이를 조절합니다.
-- 기본 캔버스는 1440px, 최소 높이 900px, 100%입니다. 너비 320–2560px와 화면 맞춤을 지원합니다. 너비/배율은 편집 세션의 보기 설정이며 페이지 Spec에 저장하지 않습니다.
+---
 
-## base.md에 정의되었지만 남아 있는 요소
-
-- ContextMenu, ResizablePanel, DataGrid, Tree, Tooltip, Timeline.
-- Toast, Dialog, Modal, Drawer, Popover.
-- Gallery, Carousel, Video, Audio, FilePreview(PDF 등 범용 뷰어), AvatarGroup.
-- Line/Bar/Pie/Donut/Area Chart, Gauge, KPI, Statistic, Sparkline.
-- Calendar, Scheduler, Kanban, RichText, CodeEditor, DiffViewer, Map, DocumentViewer.
-
-속성·상태·상호작용·저장 계약을 갖춰 단계별로 추가합니다. 차트·리치 에디터·문서 뷰어 작업 전에 관련 외부 연동 지침을 다시 확인합니다.
+### 하위 호환성 (Legacy Type Aliases)
+기존 저장된 데이터나 레거시 스펙(`row`, `column`, `password`, `keyValue`, `chip` 등)이 전달될 경우, `createNode` 및 `legacyTypeAliases` 매핑을 통해 자동으로 상응하는 최신 컴포넌트 타입과 기본 속성/스타일로 보정되어 렌더링 및 저장이 중단 없이 유지됩니다.

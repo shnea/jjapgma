@@ -1,26 +1,29 @@
 import { useState } from 'react';
 import type { UiNode } from '@jjapgma/ui-spec';
 import { FileUploadControl } from '../files/FileAssets';
+
 export const formTypes = [
   'input',
   'textarea',
+  'select',
   'checkbox',
+  'radio',
+  'switch',
+  'dateRange',
+  'fileUpload',
+  // legacy fallback
   'password',
   'number',
   'search',
-  'select',
   'multiSelect',
-  'radio',
-  'switch',
   'slider',
   'date',
   'time',
-  'dateRange',
-  'fileUpload',
   'otp',
   'colorPicker',
 ];
-const inputType: Record<string, string> = {
+
+const legacyInputType: Record<string, string> = {
   password: 'password',
   number: 'number',
   search: 'search',
@@ -30,6 +33,7 @@ const inputType: Record<string, string> = {
   fileUpload: 'file',
   colorPicker: 'color',
 };
+
 export function FormElement({ node }: { node: UiNode }) {
   const [checked, setChecked] = useState(false);
   const label = `${node.props.text}${node.props.required ? ' *' : ''}`;
@@ -37,7 +41,36 @@ export function FormElement({ node }: { node: UiNode }) {
   const labelClass = `element-field element-label-${node.props.labelPosition ?? 'top'}`;
   const common = { disabled: node.props.disabled, required: node.props.required };
   const options = (node.props.items ?? '').split('\n').filter(Boolean);
+
   if (node.type === 'fileUpload') return <FileUploadControl node={node} />;
+
+  if (node.type === 'switch')
+    return (
+      <label className="element-switch">
+        <input
+          role="switch"
+          type="checkbox"
+          checked={checked}
+          onChange={(e) => setChecked(e.target.checked)}
+          {...common}
+        />
+        <span>{label}</span>
+      </label>
+    );
+
+  if (node.type === 'checkbox')
+    return (
+      <label className="element-checkbox-single">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={(e) => setChecked(e.target.checked)}
+          {...common}
+        />
+        <span>{label}</span>
+      </label>
+    );
+
   if (node.type === 'radio')
     return (
       <fieldset
@@ -55,42 +88,25 @@ export function FormElement({ node }: { node: UiNode }) {
         </div>
       </fieldset>
     );
+
   if (node.type === 'dateRange')
     return (
       <fieldset disabled={common.disabled}>
         {showLabel && <legend>{label}</legend>}
-        <input
-          className="element-date-range-single"
-          type="text"
-          inputMode="numeric"
-          placeholder="YYYY-MM-DD ~ YYYY-MM-DD"
-          required={common.required}
-        />
+        <div className="element-field-group">
+          <input type="date" aria-label="시작일" />
+          <span>~</span>
+          <input type="date" aria-label="종료일" />
+        </div>
       </fieldset>
     );
-  if (node.type === 'checkbox' || node.type === 'switch')
-    return (
-      <fieldset
-        className={`element-options option-${node.props.optionDirection ?? 'column'} option-align-${node.props.optionAlign ?? 'left'}`}
-      >
-        <label className="render-checkbox">
-          <input
-            type="checkbox"
-            role={node.type === 'switch' ? 'switch' : undefined}
-            checked={checked}
-            onChange={(e) => setChecked(e.target.checked)}
-            {...common}
-          />
-          {label}
-        </label>
-      </fieldset>
-    );
+
   let control;
   if (node.type === 'textarea')
     control = <textarea placeholder={node.props.placeholder} {...common} />;
   else if (node.type === 'select' || node.type === 'multiSelect')
     control = (
-      <select multiple={node.type === 'multiSelect'} {...common}>
+      <select multiple={Boolean(node.props.multiple || node.type === 'multiSelect')} {...common}>
         {options.map((option, index) => (
           <option key={index}>{option}</option>
         ))}
@@ -98,18 +114,22 @@ export function FormElement({ node }: { node: UiNode }) {
     );
   else {
     const type =
-      node.type === 'input' ? (node.props.controlType ?? 'text') : (inputType[node.type] ?? 'text');
+      node.type === 'input'
+        ? (node.props.controlType ?? 'text')
+        : (legacyInputType[node.type] ?? 'text');
+    const isOtp = type === 'otp' || node.type === 'otp';
     control = (
       <input
-        type={type}
+        type={type === 'range' ? 'range' : isOtp ? 'text' : type}
         placeholder={node.props.placeholder}
-        inputMode={node.type === 'otp' ? 'numeric' : undefined}
-        maxLength={node.type === 'otp' ? 6 : undefined}
-        autoComplete={node.type === 'otp' ? 'one-time-code' : undefined}
+        inputMode={isOtp ? 'numeric' : undefined}
+        maxLength={isOtp ? 6 : undefined}
+        autoComplete={isOtp ? 'one-time-code' : undefined}
         {...common}
       />
     );
   }
+
   return (
     <label className={labelClass}>
       {showLabel && <span className="element-field-label">{label}</span>}
