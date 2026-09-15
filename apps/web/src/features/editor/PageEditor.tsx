@@ -598,8 +598,8 @@ export function PageEditor({
             <div className="editor-modal-body">
               <div className="export-option-card">
                 <div className="export-option-info">
-                  <h4>스토리북 내보내기 (.stories.tsx)</h4>
-                  <p>현재 프로젝트 화면을 Storybook 컴포넌트/스토리 파일로 내보냅니다.</p>
+                  <h4>스토리북 내보내기 (.zip)</h4>
+                  <p>npm i && npm run storybook(6006 포트)으로 바로 실행 가능한 독립 실행 환경 ZIP 패키지를 다운로드합니다.</p>
                 </div>
                 <Button
                   variant="primary"
@@ -689,14 +689,12 @@ export function PageEditor({
                             {new Date(rev.created_at).toLocaleString('ko-KR')}
                           </span>
                         </div>
-                        {!isCurrent && (
-                          <Button
-                            variant="secondary"
-                            onClick={() => void restoreRevision(rev.revision)}
-                          >
-                            이 버전으로 복원
-                          </Button>
-                        )}
+                        <Button
+                          variant={isCurrent ? 'outline' : 'secondary'}
+                          onClick={() => void restoreRevision(rev.revision)}
+                        >
+                          {isCurrent ? '현재 버전으로 복원' : '이 버전으로 복원'}
+                        </Button>
                       </div>
                     );
                   })}

@@ -12,12 +12,14 @@ export function dropElement(
   const target = findNode(spec.root, targetId);
   if (!target) throw new Error('이동할 위치를 찾을 수 없습니다.');
   if (value.id === targetId) return spec;
-  const parent = position === 'inside' ? target : findParent(spec.root, targetId);
+  const isTargetRoot = targetId === spec.root.id;
+  const effectivePosition = isTargetRoot ? 'inside' : position;
+  const parent = effectivePosition === 'inside' ? target : findParent(spec.root, targetId);
   if (!parent || !registry[parent.type].children) throw new Error('요소를 넣을 영역을 선택하세요.');
   let index =
-    position === 'inside'
+    effectivePosition === 'inside'
       ? parent.children.length
-      : parent.children.findIndex((n) => n.id === targetId) + (position === 'after' ? 1 : 0);
+      : parent.children.findIndex((n) => n.id === targetId) + (effectivePosition === 'after' ? 1 : 0);
   if (typeof value.id === 'string') {
     const oldIndex = parent.children.findIndex((n) => n.id === value.id);
     if (oldIndex >= 0 && oldIndex < index) index--;

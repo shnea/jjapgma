@@ -11,6 +11,13 @@ import {
   AlertCircle,
   Inbox,
   CheckCircle2,
+  Info,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
+  ArrowDown,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import type { UiNode } from '@jjapgma/ui-spec';
 import { FileImage } from '../files/FileAssets';
@@ -20,7 +27,7 @@ export function BasicElement({ node }: { node: UiNode }) {
   const [imageFailed, setImageFailed] = useState(false);
 
   const Icon = ({ size = 20 }: { size?: number }) => {
-    const icons = {
+    const icons: Record<string, ElementType> = {
       plus: Plus,
       star: Star,
       heart: Heart,
@@ -28,8 +35,14 @@ export function BasicElement({ node }: { node: UiNode }) {
       settings: Settings,
       check: Check,
       x: X,
+      'arrow-left': ArrowLeft,
+      'arrow-right': ArrowRight,
+      'arrow-up': ArrowUp,
+      'arrow-down': ArrowDown,
+      'chevron-left': ChevronLeft,
+      'chevron-right': ChevronRight,
     };
-    const Component = icons[node.props.iconName as keyof typeof icons] ?? Star;
+    const Component = icons[node.props.iconName as string] ?? Star;
     return <Component size={size} />;
   };
 
@@ -45,7 +58,7 @@ export function BasicElement({ node }: { node: UiNode }) {
       return <a href={node.props.href || '#'}>{node.props.text}</a>;
     case 'icon':
       return (
-        <span role="img" aria-label={node.props.text}>
+        <span role="img" aria-label={node.props.text} className="element-standalone-icon">
           <Icon size={28} />
         </span>
       );
@@ -61,7 +74,11 @@ export function BasicElement({ node }: { node: UiNode }) {
         </div>
       );
     case 'spacer':
-      return <div className="element-spacer" />;
+      return (
+        <div className="element-spacer">
+          <span className="spacer-guide-text">여백</span>
+        </div>
+      );
     case 'divider':
       return <hr />;
     case 'button':
@@ -85,8 +102,12 @@ export function BasicElement({ node }: { node: UiNode }) {
           aria-pressed={pressed}
           onClick={() => setPressed((v) => !v)}
         >
-          {node.props.iconName && <Icon size={isFab ? 24 : 16} />}
-          {!isIconOnly && <span>{node.props.text}</span>}
+          {node.props.iconName && (
+            <span className="button-icon-wrapper">
+              <Icon size={isFab ? 24 : 16} />
+            </span>
+          )}
+          {!isIconOnly && <span className="button-text">{node.props.text}</span>}
         </button>
       );
     }
@@ -101,20 +122,59 @@ export function BasicElement({ node }: { node: UiNode }) {
           </select>
         </label>
       );
-    case 'alert':
+    case 'alert': {
+      const stateType = node.props.stateType ?? 'info';
+      const AlertIcon =
+        stateType === 'error'
+          ? AlertCircle
+          : stateType === 'warning'
+            ? AlertCircle
+            : stateType === 'success'
+              ? CheckCircle2
+              : Info;
       return (
-        <div className="element-alert" role="status">
-          <AlertCircle size={20} />
-          {node.props.text}
+        <div className={`element-alert alert-${stateType}`} role="status">
+          <AlertIcon size={18} className="alert-icon" />
+          <span className="alert-message">{node.props.text}</span>
         </div>
       );
-    case 'progress':
+    }
+    case 'progress': {
+      const value = node.props.value ?? 60;
+      if (node.props.shape === 'circle') {
+        const radius = 24;
+        const circumference = 2 * Math.PI * radius;
+        const offset = circumference * (1 - value / 100);
+        return (
+          <div className="element-progress-circle">
+            <svg width={64} height={64} viewBox="0 0 64 64">
+              <circle cx="32" cy="32" r={radius} className="circle-track" />
+              <circle
+                cx="32"
+                cy="32"
+                r={radius}
+                className="circle-indicator"
+                strokeDasharray={circumference}
+                strokeDashoffset={offset}
+              />
+            </svg>
+            <div className="circle-label">
+              <strong>{value}%</strong>
+            </div>
+            {node.props.text && <small className="progress-text">{node.props.text}</small>}
+          </div>
+        );
+      }
       return (
-        <label>
-          {node.props.text}
-          <progress max={100} value={node.props.value ?? 60} />
-        </label>
+        <div className="element-progress-bar-wrap">
+          <div className="progress-info">
+            <span>{node.props.text}</span>
+            <span>{value}%</span>
+          </div>
+          <progress max={100} value={value} />
+        </div>
       );
+    }
     case 'spinner':
       return (
         <div role="status" className="element-loading">
@@ -122,14 +182,36 @@ export function BasicElement({ node }: { node: UiNode }) {
           {node.props.text}
         </div>
       );
-    case 'skeleton':
+    case 'skeleton': {
+      const shape = node.props.shape ?? 'lines';
+      if (shape === 'circle') {
+        return (
+          <div aria-label={node.props.text} role="status" className="element-skeleton skeleton-circle-wrap">
+            <div className="skeleton-circle" />
+            <div className="skeleton-lines">
+              <i style={{ width: '80%' }} />
+              <i style={{ width: '50%' }} />
+            </div>
+          </div>
+        );
+      }
+      if (shape === 'card') {
+        return (
+          <div aria-label={node.props.text} role="status" className="element-skeleton skeleton-card-wrap">
+            <div className="skeleton-thumbnail" />
+            <i style={{ width: '90%', height: 16 }} />
+            <i style={{ width: '60%' }} />
+          </div>
+        );
+      }
       return (
-        <div aria-label={node.props.text} role="status" className="element-skeleton">
-          <i />
-          <i />
-          <i />
+        <div aria-label={node.props.text} role="status" className="element-skeleton skeleton-lines">
+          <i style={{ width: '100%' }} />
+          <i style={{ width: '85%' }} />
+          <i style={{ width: '60%' }} />
         </div>
       );
+    }
     case 'emptyState':
     case 'errorState': {
       const nodeType = node.type as string;

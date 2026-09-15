@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowUpRight, LayoutGrid, Plus, Search, FolderOpen, LogOut, Layers3 } from 'lucide-react';
+import { ArrowUpRight, LayoutGrid, Plus, Search, FolderOpen, LogOut, Layers3, Trash2 } from 'lucide-react';
 import { api, errorMessage, type Project, type User } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { Brand } from '../../components/ui/Brand';
@@ -20,6 +20,17 @@ export function Projects({ user, logout }: { user: User; logout: () => void }) {
       .finally(() => setLoading(false));
   }
   useEffect(load, []);
+  async function deleteProject(id: string, projectName: string) {
+    if (!window.confirm(`'${projectName}' 프로젝트를 삭제하시겠습니까? 소속된 모든 페이지와 파일이 삭제됩니다.`)) {
+      return;
+    }
+    try {
+      await api(`/projects/${id}`, { method: 'DELETE' });
+      setProjects((prev) => prev.filter((p) => p.id !== id));
+    } catch (e) {
+      setError(errorMessage(e));
+    }
+  }
   async function create(event: React.FormEvent) {
     event.preventDefault();
     setBusy(true);
@@ -166,7 +177,24 @@ export function Projects({ user, logout }: { user: User; logout: () => void }) {
                     </span>
                   </div>
                   <div className="project-card-info">
-                    <h2>{project.name}</h2>
+                    <div className="project-card-header-row">
+                      <h2>{project.name}</h2>
+                      {project.role === 'OWNER' && (
+                        <button
+                          type="button"
+                          className="delete-project-btn"
+                          aria-label={`${project.name} 삭제`}
+                          title="프로젝트 삭제"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            void deleteProject(project.id, project.name);
+                          }}
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      )}
+                    </div>
                     <div>
                       <span>
                         {project.pageCount}개 페이지 ·{' '}

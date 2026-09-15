@@ -225,10 +225,55 @@
   min-height: 34px;
   font-size: 12px;
   border: 1px solid transparent;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.1s;
+}
+.layer-row:hover {
+  background: #f7f9f4;
 }
 .layer-row.selected {
   background: #edf4e1;
-  border-color: #e2edce;
+  border-color: #b8d496;
+}
+.layer-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  color: #98a58d;
+  cursor: grab;
+  margin-right: 2px;
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+.layer-drag-handle:hover {
+  opacity: 1;
+}
+.layer-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #4a593f;
+  flex: 1;
+  min-width: 0;
+  padding: 6px 4px;
+}
+.layer-title-wrap > span {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.layer-drop-before {
+  box-shadow: inset 0 2px 0 0 #466e2c;
+}
+.layer-drop-after {
+  box-shadow: inset 0 -2px 0 0 #466e2c;
+}
+.layer-drop-inside {
+  outline: 2px dashed #466e2c;
+  outline-offset: -2px;
+  background: rgba(70, 110, 44, 0.08) !important;
 }
 .layer-toggle {
   border: 0;

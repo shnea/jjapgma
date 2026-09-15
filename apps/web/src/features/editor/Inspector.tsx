@@ -393,6 +393,23 @@ export function Inspector({
                 />
               </label>
             </div>
+            <div style={{ marginTop: 14 }}>
+              <label>
+                커스텀 스타일 (CSS)
+                <textarea
+                  placeholder="예: box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-style: dashed;"
+                  value={node.props.customCss ?? ''}
+                  onChange={(e) =>
+                    onUpdate((n) => {
+                      n.props.customCss = e.target.value;
+                    })
+                  }
+                  rows={2}
+                  style={{ width: '100%', fontSize: 12, fontFamily: 'monospace', resize: 'vertical', marginTop: 4 }}
+                />
+              </label>
+              <p className="panel-help">임의의 CSS 속성을 세미콜론(;)으로 구분하여 추가할 수 있습니다.</p>
+            </div>
             {breakpoint !== 'desktop' && (
               <Button
                 variant="ghost"

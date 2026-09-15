@@ -50,7 +50,12 @@ export function createNode(typeOrLegacy: string): UiNode {
         : {}),
       ...(type === 'link' ? { href: '#details' } : {}),
       ...(type === 'badge' ? { shape: 'rounded' as const } : {}),
+      ...(type === 'progress' ? { shape: 'bar' as const, value: 65 } : {}),
+      ...(type === 'skeleton' ? { shape: 'lines' as const } : {}),
       ...(type === 'emptyState' ? { stateType: 'empty' as const } : {}),
+      ...(type === 'alert' ? { stateType: 'info' as const, text: '알림 메시지입니다.' } : {}),
+      ...(type === 'modal' ? { isOpen: true, text: '모달 대화상자' } : {}),
+      ...(type === 'dialog' ? { text: '다이얼로그 메시지입니다.', titleLevel: 'h3' as const } : {}),
       ...(type === 'button' ? { variant: 'default' as const } : {}),
       ...(legacy?.props),
     },
@@ -61,6 +66,8 @@ export function createNode(typeOrLegacy: string): UiNode {
           padding: 24,
           ...(type === 'card' ? { background: '#ffffff', radius: 12 } : {}),
           ...(type === 'grid' ? { gridColumns: 2, gridRows: 1 } : {}),
+          ...(type === 'modal' ? { background: '#ffffff', radius: 12, width: '480px' } : {}),
+          ...(type === 'dialog' ? { background: '#ffffff', radius: 12, width: '400px' } : {}),
           ...(legacy?.style),
         }
       : type === 'spacer'

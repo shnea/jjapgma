@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, Module, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Inject, Module, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { Database } from '../database/database.js';
@@ -47,6 +47,18 @@ class ProjectsController {
       ...(await this.db.pool.query('SELECT * FROM projects WHERE id=$1', [id])).rows[0],
       role,
     };
+  }
+  @Delete(':id') async delete(@Req() request: AuthRequest, @Param('id') value: string) {
+    const id = parse(uuid, value);
+    return this.db.transaction(async (client) => {
+      await projectAccess(client, id, request.identity.id, true);
+      await client.query('DELETE FROM projects WHERE id=$1', [id]);
+      await client.query(
+        "INSERT INTO audit(user_id,project_id,action,target_id) VALUES($1,$2,'project.delete',$2)",
+        [request.identity.id, id],
+      );
+      return { success: true };
+    });
   }
 }
 @Module({ imports: [AuthModule], controllers: [ProjectsController] })

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Calendar } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { UiNode } from '@jjapgma/ui-spec';
 import { FileUploadControl } from '../files/FileAssets';
 
@@ -35,52 +35,248 @@ const legacyInputType: Record<string, string> = {
   colorPicker: 'color',
 };
 
+function DateRangeControl({
+  label,
+  showLabel,
+  labelPosition = 'top',
+  disabled,
+}: {
+  label: string;
+  showLabel: boolean;
+  labelPosition?: 'top' | 'left' | 'right';
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [range, setRange] = useState({ start: '2026-09-01', end: '2026-09-15' });
+  const [tempStart, setTempStart] = useState<string | null>('2026-09-01');
+  const [tempEnd, setTempEnd] = useState<string | null>('2026-09-15');
+  const [currentMonth, setCurrentMonth] = useState(new Date(2026, 8, 1));
+
+  const year = currentMonth.getFullYear();
+  const month = currentMonth.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDayOfWeek = new Date(year, month, 1).getDay();
+
+  const formatDate = (y: number, m: number, d: number) => {
+    const mm = String(m + 1).padStart(2, '0');
+    const dd = String(d).padStart(2, '0');
+    return `${y}-${mm}-${dd}`;
+  };
+
+  const handleSelectDay = (day: number) => {
+    const dateStr = formatDate(year, month, day);
+    if (!tempStart || (tempStart && tempEnd)) {
+      setTempStart(dateStr);
+      setTempEnd(null);
+    } else if (tempStart && !tempEnd) {
+      if (dateStr < tempStart) {
+        setTempEnd(tempStart);
+        setTempStart(dateStr);
+      } else {
+        setTempEnd(dateStr);
+      }
+    }
+  };
+
+  const applyRange = () => {
+    if (tempStart) {
+      setRange({ start: tempStart, end: tempEnd || tempStart });
+    }
+    setOpen(false);
+  };
+
+  const displayValue = `${range.start} ~ ${range.end}`;
+  const isLabelRight = labelPosition === 'right';
+  const labelClass = `element-field element-label-${labelPosition}`;
+  const labelSpan = showLabel ? <span className="element-field-label">{label}</span> : null;
+  const control = (
+    <div className="element-date-range-single" onClick={() => !disabled && setOpen((v) => !v)}>
+      <input
+        type="text"
+        readOnly
+        value={displayValue}
+        placeholder="시작일 ~ 종료일"
+        disabled={disabled}
+      />
+      <Calendar size={18} className="calendar-icon" />
+    </div>
+  );
+
+  return (
+    <div className={`element-date-range-container ${labelClass}`}>
+      {isLabelRight ? (
+        <>
+          {control}
+          {labelSpan}
+        </>
+      ) : (
+        <>
+          {labelSpan}
+          {control}
+        </>
+      )}
+
+      {open && (
+        <div className="date-range-popover" onClick={(e) => e.stopPropagation()}>
+          <div className="popover-header">
+            <button
+              type="button"
+              className="month-nav-btn"
+              onClick={() => setCurrentMonth(new Date(year, month - 1, 1))}
+              aria-label="이전 달"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <span className="current-month-title">
+              {year}년 {month + 1}월
+            </span>
+            <button
+              type="button"
+              className="month-nav-btn"
+              onClick={() => setCurrentMonth(new Date(year, month + 1, 1))}
+              aria-label="다음 달"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+
+          <div className="calendar-grid">
+            <div className="weekday-header">
+              {['일', '월', '화', '수', '목', '금', '토'].map((w, i) => (
+                <span key={i} className={i === 0 ? 'sun' : i === 6 ? 'sat' : ''}>
+                  {w}
+                </span>
+              ))}
+            </div>
+            <div className="days-grid">
+              {Array.from({ length: firstDayOfWeek }).map((_, i) => (
+                <span key={`empty-${i}`} className="day-empty" />
+              ))}
+              {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((d) => {
+                const dateStr = formatDate(year, month, d);
+                const isStart = tempStart === dateStr;
+                const isEnd = tempEnd === dateStr;
+                const isInRange =
+                  tempStart && tempEnd && dateStr > tempStart && dateStr < tempEnd;
+                return (
+                  <button
+                    key={d}
+                    type="button"
+                    className={`day-btn ${isStart ? 'start-date' : ''} ${isEnd ? 'end-date' : ''} ${isInRange ? 'in-range' : ''}`}
+                    onClick={() => handleSelectDay(d)}
+                  >
+                    {d}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="popover-footer">
+            <button
+              type="button"
+              className="picker-sub-btn"
+              onClick={() => {
+                const today = formatDate(2026, 8, 15);
+                setTempStart(today);
+                setTempEnd(today);
+              }}
+            >
+              오늘
+            </button>
+            <div className="footer-actions">
+              <button
+                type="button"
+                className="picker-cancel-btn"
+                onClick={() => {
+                  setTempStart(range.start);
+                  setTempEnd(range.end);
+                  setOpen(false);
+                }}
+              >
+                취소
+              </button>
+              <button type="button" className="picker-apply-btn" onClick={applyRange}>
+                적용
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function FormElement({ node }: { node: UiNode }) {
   const [checked, setChecked] = useState(false);
   const label = `${node.props.text}${node.props.required ? ' *' : ''}`;
   const showLabel = node.props.labelVisible !== false;
-  const labelClass = `element-field element-label-${node.props.labelPosition ?? 'top'}`;
+  const labelPosition = node.props.labelPosition ?? 'top';
+  const isLabelRight = labelPosition === 'right';
+  const labelClass = `element-field element-label-${labelPosition}`;
   const common = { disabled: node.props.disabled, required: node.props.required };
   const options = (node.props.items ?? '').split('\n').filter(Boolean);
 
   if (node.type === 'fileUpload') return <FileUploadControl node={node} />;
 
-  if (node.type === 'switch')
-    return (
-      <div className={labelClass}>
-        {showLabel && node.props.labelPosition === 'top' && (
-          <span className="element-field-label">{label}</span>
-        )}
-        <label className="element-switch">
-          <input
-            role="switch"
-            type="checkbox"
-            checked={checked}
-            onChange={(e) => setChecked(e.target.checked)}
-            {...common}
-          />
-          {(!showLabel || node.props.labelPosition !== 'top') && <span>{label}</span>}
-        </label>
-      </div>
-    );
+  const labelSpan = showLabel ? <span className="element-field-label">{label}</span> : null;
 
-  if (node.type === 'checkbox')
+  if (node.type === 'switch') {
+    const switchControl = (
+      <label className="element-switch-track">
+        <input
+          role="switch"
+          type="checkbox"
+          checked={checked}
+          onChange={(e) => setChecked(e.target.checked)}
+          {...common}
+        />
+      </label>
+    );
     return (
       <div className={labelClass}>
-        {showLabel && node.props.labelPosition === 'top' && (
-          <span className="element-field-label">{label}</span>
+        {isLabelRight ? (
+          <>
+            {switchControl}
+            {labelSpan}
+          </>
+        ) : (
+          <>
+            {labelSpan}
+            {switchControl}
+          </>
         )}
-        <label className="element-checkbox-single">
-          <input
-            type="checkbox"
-            checked={checked}
-            onChange={(e) => setChecked(e.target.checked)}
-            {...common}
-          />
-          {(!showLabel || node.props.labelPosition !== 'top') && <span>{label}</span>}
-        </label>
       </div>
     );
+  }
+
+  if (node.type === 'checkbox') {
+    const checkboxControl = (
+      <label className="element-checkbox-box">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={(e) => setChecked(e.target.checked)}
+          {...common}
+        />
+      </label>
+    );
+    return (
+      <div className={labelClass}>
+        {isLabelRight ? (
+          <>
+            {checkboxControl}
+            {labelSpan}
+          </>
+        ) : (
+          <>
+            {labelSpan}
+            {checkboxControl}
+          </>
+        )}
+      </div>
+    );
+  }
 
   if (node.type === 'radio')
     return (
@@ -102,19 +298,12 @@ export function FormElement({ node }: { node: UiNode }) {
 
   if (node.type === 'dateRange')
     return (
-      <div className={labelClass}>
-        {showLabel && <span className="element-field-label">{label}</span>}
-        <div className="element-date-range-single">
-          <input
-            type="text"
-            readOnly
-            value="2026-09-01 ~ 2026-09-15"
-            placeholder="시작일 ~ 종료일"
-            disabled={common.disabled}
-          />
-          <Calendar size={18} className="calendar-icon" />
-        </div>
-      </div>
+      <DateRangeControl
+        label={label}
+        showLabel={showLabel}
+        labelPosition={labelPosition}
+        disabled={common.disabled}
+      />
     );
 
   let control;
@@ -149,8 +338,17 @@ export function FormElement({ node }: { node: UiNode }) {
 
   return (
     <label className={labelClass}>
-      {showLabel && <span className="element-field-label">{label}</span>}
-      {control}
+      {isLabelRight ? (
+        <>
+          {control}
+          {labelSpan}
+        </>
+      ) : (
+        <>
+          {labelSpan}
+          {control}
+        </>
+      )}
     </label>
   );
 }

@@ -37,6 +37,18 @@ export function NodeRenderer({
     if (container && fraction > 0.22 && fraction < 0.78) return 'inside';
     return fraction < 0.5 ? 'before' : 'after';
   }
+  function parseCustomCss(cssStr?: string): CSSProperties {
+    if (!cssStr) return {};
+    const custom: Record<string, string> = {};
+    cssStr.split(';').forEach((statement) => {
+      const [key, ...values] = statement.split(':');
+      if (key && values.length) {
+        const camelKey = key.trim().replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+        custom[camelKey] = values.join(':').trim();
+      }
+    });
+    return custom as CSSProperties;
+  }
   const style: CSSProperties = {
     width: value.width,
     height: value.height,
@@ -60,8 +72,9 @@ export function NodeRenderer({
         }
       : {}),
     ...(value.hidden ? { ...(preview ? { display: 'none' } : {}), opacity: 0.3 } : {}),
+    ...parseCustomCss(node.props.customCss),
   };
-  const content = container ? (
+  const innerContent = container ? (
     node.children.length ? (
       node.children.map((child) => (
         <NodeRenderer
@@ -84,6 +97,29 @@ export function NodeRenderer({
   ) : (
     <ElementContent node={node} />
   );
+  const content =
+    node.type === 'modal' ? (
+      <div className="render-modal-inner">
+        <div className="modal-header-bar">
+          <strong>{node.props.text || '모달 대화상자'}</strong>
+          <span className="modal-close-btn" aria-hidden="true">×</span>
+        </div>
+        <div className="modal-content-area">{innerContent}</div>
+      </div>
+    ) : node.type === 'dialog' ? (
+      <div className="render-dialog-inner">
+        <div className="dialog-header-bar">
+          <strong>{node.props.text || '다이얼로그'}</strong>
+        </div>
+        <div className="dialog-content-area">{innerContent}</div>
+        <div className="dialog-footer-bar">
+          <button type="button" className="dialog-btn secondary">취소</button>
+          <button type="button" className="dialog-btn primary">확인</button>
+        </div>
+      </div>
+    ) : (
+      innerContent
+    );
   return (
     <div
       data-node-id={node.id}
@@ -143,10 +179,7 @@ export function NodeRenderer({
       {container || preview ? (
         content
       ) : (
-        <div
-          className="render-content"
-          inert={!preview && !['heading', 'text', 'label', 'divider', 'spacer'].includes(node.type)}
-        >
+        <div className="render-content">
           {content}
         </div>
       )}
