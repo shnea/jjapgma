@@ -11,7 +11,12 @@ import {
   Undo2,
   X,
   Download,
+  History,
+  FileCode,
+  Globe,
+  FileJson,
 } from 'lucide-react';
+import { exportToJson, exportToHtml, exportToStorybook } from './export/exporters';
 import {
   cloneNode,
   createNode,
@@ -112,11 +117,53 @@ export function PageEditor({
       if (mounted.current) setSaving(false);
     }
   }, [dirty, readOnly, conflict, initial.id, name, spec, revision, onSaved]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [revisionsList, setRevisionsList] = useState<
+    Array<{ page_id: string; revision: number; name: string; author_id: string; created_at: string }>
+  >([]);
+  const [loadingRevisions, setLoadingRevisions] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+
   useEffect(() => {
-    if (!dirty || saving || error || conflict) return;
-    const timer = window.setTimeout(() => void save(), 1500);
-    return () => clearTimeout(timer);
-  }, [dirty, saving, error, conflict, save]);
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        if (dirty && !saving && !readOnly && !conflict) {
+          void save();
+        }
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [dirty, saving, readOnly, conflict, save]);
+
+  const openHistory = async () => {
+    setShowHistory(true);
+    setLoadingRevisions(true);
+    try {
+      const list = await api<
+        Array<{ page_id: string; revision: number; name: string; author_id: string; created_at: string }>
+      >(`/pages/${initial.id}/revisions`);
+      setRevisionsList(list);
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setLoadingRevisions(false);
+    }
+  };
+
+  const restoreRevision = async (revNum: number) => {
+    try {
+      const revData = await api<{ name: string; spec: UiSpec }>(
+        `/pages/${initial.id}/revisions/${revNum}`,
+      );
+      dispatch({ type: 'edit', spec: revData.spec });
+      setName(revData.name);
+      setShowHistory(false);
+    } catch (e) {
+      setError(errorMessage(e));
+    }
+  };
   function change(action: () => UiSpec) {
     if (readOnly) return;
     try {
@@ -334,8 +381,23 @@ export function PageEditor({
           ))}
         </div>
         <div className="toolbar-actions">
-          <Button variant="ghost" onClick={download} aria-label="화면 JSON 다운로드">
+          <Button
+            variant="ghost"
+            onClick={() => void openHistory()}
+            title="버전 기록"
+            aria-label="버전 기록"
+          >
+            <History size={16} />
+            <span style={{ fontSize: 13, marginLeft: 4 }}>v{revision}</span>
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => setShowExportModal(true)}
+            aria-label="내보내기"
+            title="내보내기"
+          >
             <Download size={16} />
+            <span style={{ fontSize: 13, marginLeft: 4 }}>내보내기</span>
           </Button>
           <Button variant="secondary" onClick={() => setPreview((v) => !v)}>
             {preview ? <X size={15} /> : <Eye size={15} />} {preview ? '편집으로' : '미리보기'}
@@ -344,6 +406,7 @@ export function PageEditor({
             disabled={readOnly || !dirty || conflict}
             loading={saving}
             onClick={() => void save()}
+            title="수동 저장 (Ctrl+S)"
           >
             <Save size={15} />
             저장
@@ -522,6 +585,127 @@ export function PageEditor({
           </aside>
         )}
       </div>
+
+      {showExportModal && (
+        <div className="editor-modal-backdrop" onClick={() => setShowExportModal(false)}>
+          <div className="editor-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="editor-modal-header">
+              <h3>프로젝트 내보내기</h3>
+              <Button variant="ghost" onClick={() => setShowExportModal(false)} aria-label="닫기">
+                <X size={16} />
+              </Button>
+            </div>
+            <div className="editor-modal-body">
+              <div className="export-option-card">
+                <div className="export-option-info">
+                  <h4>스토리북 내보내기 (.stories.tsx)</h4>
+                  <p>현재 프로젝트 화면을 Storybook 컴포넌트/스토리 파일로 내보냅니다.</p>
+                </div>
+                <Button
+                  variant="primary"
+                  aria-label="스토리북 내보내기"
+                  onClick={() => {
+                    exportToStorybook(name, spec);
+                    setShowExportModal(false);
+                  }}
+                >
+                  <FileCode size={14} style={{ marginRight: 6 }} /> 내보내기
+                </Button>
+              </div>
+
+              <div className="export-option-card">
+                <div className="export-option-info">
+                  <h4>HTML 내보내기 (.html)</h4>
+                  <p>브라우저에서 바로 열 수 있는 독립 실행형 단일 HTML 파일로 내보냅니다.</p>
+                </div>
+                <Button
+                  variant="primary"
+                  aria-label="HTML 내보내기"
+                  onClick={() => {
+                    exportToHtml(name, spec);
+                    setShowExportModal(false);
+                  }}
+                >
+                  <Globe size={14} style={{ marginRight: 6 }} /> 내보내기
+                </Button>
+              </div>
+
+              <div className="export-option-card">
+                <div className="export-option-info">
+                  <h4>JSON 스펙 내보내기 (.json)</h4>
+                  <p>짭그마 원본 UI Spec JSON 파일을 내려받습니다.</p>
+                </div>
+                <Button
+                  variant="primary"
+                  aria-label="JSON 내보내기"
+                  onClick={() => {
+                    exportToJson(name, spec);
+                    setShowExportModal(false);
+                  }}
+                >
+                  <FileJson size={14} style={{ marginRight: 6 }} /> 내보내기
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showHistory && (
+        <div className="editor-modal-backdrop" onClick={() => setShowHistory(false)}>
+          <div className="editor-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="editor-modal-header">
+              <h3>버전 기록 (Revision History)</h3>
+              <Button variant="ghost" onClick={() => setShowHistory(false)} aria-label="닫기">
+                <X size={16} />
+              </Button>
+            </div>
+            <div className="editor-modal-body">
+              <p style={{ fontSize: 13, color: '#6b7280' }}>
+                저장할 때마다 생성된 버전 목록입니다. 원하는 시점으로 복원할 수 있습니다.
+              </p>
+              {loadingRevisions ? (
+                <p style={{ fontSize: 13, color: '#9ca3af', textAlign: 'center', padding: 24 }}>
+                  버전 기록을 불러오는 중…
+                </p>
+              ) : revisionsList.length === 0 ? (
+                <p style={{ fontSize: 13, color: '#9ca3af', textAlign: 'center', padding: 24 }}>
+                  기록된 이전 버전이 없습니다.
+                </p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {revisionsList.map((rev) => {
+                    const isCurrent = rev.revision === revision;
+                    return (
+                      <div
+                        key={rev.revision}
+                        className={`revision-item ${isCurrent ? 'current' : ''}`}
+                      >
+                        <div className="revision-meta">
+                          <span className="revision-tag">
+                            v{rev.revision} {isCurrent && <span style={{ color: '#466e2c', fontSize: 12 }}>(현재 버전)</span>}
+                          </span>
+                          <span className="revision-time">
+                            {new Date(rev.created_at).toLocaleString('ko-KR')}
+                          </span>
+                        </div>
+                        {!isCurrent && (
+                          <Button
+                            variant="secondary"
+                            onClick={() => void restoreRevision(rev.revision)}
+                          >
+                            이 버전으로 복원
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </FileAssetsProvider>
   );
 }

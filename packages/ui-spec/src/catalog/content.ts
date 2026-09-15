@@ -27,7 +27,7 @@ export const contentComponents = {
   // 데이터 (Data)
   table: item('테이블', '데이터', '목록', 'table'),
   list: item('목록', '데이터', '목록', 'list'),
-  descriptionList: item('설명 목록 (키와 값)', '데이터', '상세 정보', 'file-text'),
+  descriptionList: item('설명 목록', '데이터', '상세 정보', 'file-text'),
   badge: item('배지', '데이터', '새 소식', 'tag'),
   avatar: item('아바타', '데이터', '사용자', 'user'),
   accordion: item('아코디언', '데이터', '내용을 여기에 입력하세요.', 'chevrons-up-down'),

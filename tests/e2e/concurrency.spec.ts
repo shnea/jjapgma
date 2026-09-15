@@ -30,6 +30,7 @@ test('drag insertion and save conflicts keep the local edit available', async ({
   await page.getByRole('button', { name: '제목', exact: true }).click();
   await page.getByLabel('내용', { exact: true }).fill('내가 작업한 내용');
   await expect(page.getByTestId('node-card').getByTestId('node-heading')).toHaveCount(1);
+  await page.getByRole('button', { name: '저장', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('다른 곳에서 저장한 변경', {
     timeout: 15000,
   });

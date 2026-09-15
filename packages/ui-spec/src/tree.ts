@@ -33,11 +33,26 @@ export function createNode(typeOrLegacy: string): UiNode {
                   : '첫 번째 항목\n두 번째 항목\n세 번째 항목',
           }
         : {}),
+      ...(type === 'image' ? { src: '/placeholder.svg' } : {}),
+      ...(type === 'table'
+        ? {
+            showHeader: true,
+            paginationMode: 'none' as const,
+            paginationDesign: 'numbered' as const,
+          }
+        : {}),
+      ...(type === 'list'
+        ? {
+            showHeader: false,
+            paginationMode: 'none' as const,
+            paginationDesign: 'numbered' as const,
+          }
+        : {}),
       ...(type === 'link' ? { href: '#details' } : {}),
       ...(type === 'badge' ? { shape: 'rounded' as const } : {}),
       ...(type === 'emptyState' ? { stateType: 'empty' as const } : {}),
       ...(type === 'button' ? { variant: 'default' as const } : {}),
-      ...(legacy?.props ?? {}),
+      ...(legacy?.props),
     },
     style: registry[type].children
       ? {
@@ -46,7 +61,7 @@ export function createNode(typeOrLegacy: string): UiNode {
           padding: 24,
           ...(type === 'card' ? { background: '#ffffff', radius: 12 } : {}),
           ...(type === 'grid' ? { gridColumns: 2, gridRows: 1 } : {}),
-          ...(legacy?.style ?? {}),
+          ...(legacy?.style),
         }
       : type === 'spacer'
         ? { height: '48px' }

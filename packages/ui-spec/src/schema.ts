@@ -59,6 +59,9 @@ export const propsSchema = z
     iconName: z.string().max(60).optional(),
     value: z.number().min(0).max(100).optional(),
     items: z.string().max(5000).optional(),
+    showHeader: z.boolean().optional(),
+    paginationMode: z.enum(['none', 'pagination', 'infinite']).optional(),
+    paginationDesign: z.enum(['numbered', 'compact', 'simple']).optional(),
     attachment: z
       .object({
         fileId: z.string().regex(/^[a-zA-Z0-9_-]{1,128}$/),

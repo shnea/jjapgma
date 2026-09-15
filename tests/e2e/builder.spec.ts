@@ -21,6 +21,7 @@ test('project → page → edit → responsive preview → reload persisted data
   await page.getByRole('button', { name: '편집으로' }).click();
   await page.getByRole('button', { name: '실행 취소' }).click();
   await page.getByRole('button', { name: '다시 실행' }).click();
+  await page.getByRole('button', { name: '저장', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('저장됨', { timeout: 15000 });
   await page.reload();
   await expect(page.getByRole('heading', { name: '함께 만드는 새로운 화면' })).toBeVisible();
@@ -29,7 +30,23 @@ test('project → page → edit → responsive preview → reload persisted data
   await page.getByLabel('레이어 이름').fill('메인 제목');
   await page.getByLabel('잠금', { exact: true }).check();
   await expect(page.getByLabel('내용', { exact: true })).toBeDisabled();
+  await page.getByRole('button', { name: '저장', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('저장됨', { timeout: 15000 });
+
+  // Verify export modal
+  await page.getByRole('button', { name: '내보내기', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '프로젝트 내보내기' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '스토리북 내보내기' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'HTML 내보내기' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'JSON 내보내기' })).toBeVisible();
+  await page.getByRole('button', { name: '닫기' }).click();
+
+  // Verify version history modal
+  await page.getByRole('button', { name: '버전 기록' }).click();
+  await expect(page.getByRole('heading', { name: /버전 기록/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: '이 버전으로 복원' }).first()).toBeVisible();
+  await page.getByRole('button', { name: '닫기' }).click();
+
   await page.screenshot({ path: 'test-results/editor.png', fullPage: true });
 });
 test('mobile dashboard fits the viewport', async ({ page }) => {

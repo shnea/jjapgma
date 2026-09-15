@@ -477,3 +477,99 @@
   font-size: 12px;
   line-height: 1.6;
 }
+
+/* Modal Dialogs */
+.editor-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(2px);
+}
+.editor-modal {
+  background: #ffffff;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 520px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.editor-modal-header {
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+}
+.editor-modal-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+.editor-modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.export-option-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fafbf9;
+  gap: 12px;
+  transition: border-color 0.15s;
+}
+.export-option-card:hover {
+  border-color: #466e2c;
+}
+.export-option-info h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 4px;
+}
+.export-option-info p {
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.4;
+}
+.revision-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+}
+.revision-item.current {
+  border-color: #466e2c;
+  background: #f4f7f2;
+}
+.revision-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.revision-tag {
+  font-weight: 600;
+  font-size: 14px;
+  color: #1f2937;
+}
+.revision-time {
+  font-size: 12px;
+  color: #6b7280;
+}
+

@@ -53,6 +53,7 @@ test('canvas moves existing elements, persists order, respects locks and adjusts
   await expect(box.getByTestId('node-heading')).toHaveCount(0);
   await page.getByRole('button', { name: '다시 실행', exact: true }).click();
   await expect(box.getByTestId('node-heading')).toHaveCount(1);
+  await page.getByRole('button', { name: '저장', exact: true }).click();
   await expect(page.locator('.save-status')).toContainText('저장됨', { timeout: 15000 });
   await page.reload();
   await page.getByRole('button', { name: '화면에 맞춤' }).click();

@@ -28,6 +28,7 @@ test('attachment upload reaches the proxy and survives page reload alongside edi
     page.locator('.inspector').getByRole('link', { name: '요구사항.txt 다운로드' }),
   ).toBeVisible();
   await page.getByLabel('레이어 이름').fill('첨부한 요구사항');
+  await page.getByRole('button', { name: '저장', exact: true }).click();
   await expect(page.locator('.save-status')).toContainText('저장됨', { timeout: 15000 });
   await page.reload();
   await page.getByRole('button', { name: '미리보기', exact: true }).click();

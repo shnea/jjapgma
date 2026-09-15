@@ -90,4 +90,30 @@ export class PagesService {
       return saved;
     });
   }
+  async listRevisions(pageId: string, userId: string) {
+    const page = (await this.db.pool.query('SELECT project_id FROM pages WHERE id=$1', [pageId]))
+      .rows[0];
+    if (!page) throw new NotFoundException('페이지를 찾을 수 없습니다.');
+    await projectAccess(this.db.pool, page.project_id, userId);
+    return (
+      await this.db.pool.query(
+        'SELECT page_id, revision, name, author_id, created_at FROM page_revisions WHERE page_id=$1 ORDER BY revision DESC LIMIT 50',
+        [pageId],
+      )
+    ).rows;
+  }
+  async getRevision(pageId: string, userId: string, revisionNumber: number) {
+    const page = (await this.db.pool.query('SELECT project_id FROM pages WHERE id=$1', [pageId]))
+      .rows[0];
+    if (!page) throw new NotFoundException('페이지를 찾을 수 없습니다.');
+    await projectAccess(this.db.pool, page.project_id, userId);
+    const revision = (
+      await this.db.pool.query(
+        'SELECT * FROM page_revisions WHERE page_id=$1 AND revision=$2',
+        [pageId, revisionNumber],
+      )
+    ).rows[0];
+    if (!revision) throw new NotFoundException('해당 버전을 찾을 수 없습니다.');
+    return revision;
+  }
 }

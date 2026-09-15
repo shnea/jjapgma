@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Calendar } from 'lucide-react';
 import type { UiNode } from '@jjapgma/ui-spec';
 import { FileUploadControl } from '../files/FileAssets';
 
@@ -46,29 +47,39 @@ export function FormElement({ node }: { node: UiNode }) {
 
   if (node.type === 'switch')
     return (
-      <label className="element-switch">
-        <input
-          role="switch"
-          type="checkbox"
-          checked={checked}
-          onChange={(e) => setChecked(e.target.checked)}
-          {...common}
-        />
-        <span>{label}</span>
-      </label>
+      <div className={labelClass}>
+        {showLabel && node.props.labelPosition === 'top' && (
+          <span className="element-field-label">{label}</span>
+        )}
+        <label className="element-switch">
+          <input
+            role="switch"
+            type="checkbox"
+            checked={checked}
+            onChange={(e) => setChecked(e.target.checked)}
+            {...common}
+          />
+          {(!showLabel || node.props.labelPosition !== 'top') && <span>{label}</span>}
+        </label>
+      </div>
     );
 
   if (node.type === 'checkbox')
     return (
-      <label className="element-checkbox-single">
-        <input
-          type="checkbox"
-          checked={checked}
-          onChange={(e) => setChecked(e.target.checked)}
-          {...common}
-        />
-        <span>{label}</span>
-      </label>
+      <div className={labelClass}>
+        {showLabel && node.props.labelPosition === 'top' && (
+          <span className="element-field-label">{label}</span>
+        )}
+        <label className="element-checkbox-single">
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={(e) => setChecked(e.target.checked)}
+            {...common}
+          />
+          {(!showLabel || node.props.labelPosition !== 'top') && <span>{label}</span>}
+        </label>
+      </div>
     );
 
   if (node.type === 'radio')
@@ -91,22 +102,28 @@ export function FormElement({ node }: { node: UiNode }) {
 
   if (node.type === 'dateRange')
     return (
-      <fieldset disabled={common.disabled}>
-        {showLabel && <legend>{label}</legend>}
-        <div className="element-field-group">
-          <input type="date" aria-label="시작일" />
-          <span>~</span>
-          <input type="date" aria-label="종료일" />
+      <div className={labelClass}>
+        {showLabel && <span className="element-field-label">{label}</span>}
+        <div className="element-date-range-single">
+          <input
+            type="text"
+            readOnly
+            value="2026-09-01 ~ 2026-09-15"
+            placeholder="시작일 ~ 종료일"
+            disabled={common.disabled}
+          />
+          <Calendar size={18} className="calendar-icon" />
         </div>
-      </fieldset>
+      </div>
     );
 
   let control;
-  if (node.type === 'textarea')
+  const nodeType = node.type as string;
+  if (nodeType === 'textarea')
     control = <textarea placeholder={node.props.placeholder} {...common} />;
-  else if (node.type === 'select' || node.type === 'multiSelect')
+  else if (nodeType === 'select' || nodeType === 'multiSelect')
     control = (
-      <select multiple={Boolean(node.props.multiple || node.type === 'multiSelect')} {...common}>
+      <select multiple={Boolean(node.props.multiple || nodeType === 'multiSelect')} {...common}>
         {options.map((option, index) => (
           <option key={index}>{option}</option>
         ))}
@@ -116,8 +133,8 @@ export function FormElement({ node }: { node: UiNode }) {
     const type =
       node.type === 'input'
         ? (node.props.controlType ?? 'text')
-        : (legacyInputType[node.type] ?? 'text');
-    const isOtp = type === 'otp' || node.type === 'otp';
+        : (legacyInputType[nodeType] ?? 'text');
+    const isOtp = type === 'otp' || nodeType === 'otp';
     control = (
       <input
         type={type === 'range' ? 'range' : isOtp ? 'text' : type}

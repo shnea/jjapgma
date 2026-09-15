@@ -166,6 +166,34 @@ export const propertySchema = [
     editor: 'textarea',
     types: optionTypes,
   },
+  {
+    key: 'showHeader',
+    label: '헤더 행 표시',
+    editor: 'checkbox',
+    types: ['table', 'list'],
+  },
+  {
+    key: 'paginationMode',
+    label: '페이징 방식',
+    editor: 'select',
+    options: [
+      ['none', '페이징 없음 (전체 표시)'],
+      ['pagination', '페이지네이션 (<< < 1 2 3 > >>)'],
+      ['infinite', '무한 스크롤'],
+    ],
+    types: ['table', 'list'],
+  },
+  {
+    key: 'paginationDesign',
+    label: '페이지네이션 디자인',
+    editor: 'select',
+    options: [
+      ['numbered', '숫자 버튼형 (<< < 1 2 3 > >>)'],
+      ['compact', '컴팩트형 (< 1 / 5 >)'],
+      ['simple', '심플형 (이전 / 다음)'],
+    ],
+    types: ['table', 'list'],
+  },
   { key: 'href', label: '이동 주소', editor: 'text', types: ['link'] },
   { key: 'src', label: '이미지 경로 (같은 사이트)', editor: 'text', types: ['image'] },
   {

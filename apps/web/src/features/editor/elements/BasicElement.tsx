@@ -33,7 +33,7 @@ export function BasicElement({ node }: { node: UiNode }) {
     return <Component size={size} />;
   };
 
-  switch (node.type) {
+  switch (node.type as string) {
     case 'heading': {
       const Tag = (node.props.titleLevel ?? 'h2') as ElementType;
       return <Tag>{node.props.text}</Tag>;
@@ -68,10 +68,11 @@ export function BasicElement({ node }: { node: UiNode }) {
     case 'iconButton':
     case 'fab':
     case 'toggleButton': {
+      const nodeType = node.type as string;
       const variant =
-        node.type === 'fab'
+        nodeType === 'fab'
           ? 'fab'
-          : node.type === 'iconButton'
+          : nodeType === 'iconButton'
             ? 'icon'
             : node.props.variant ?? 'default';
       const isIconOnly = variant === 'icon' || variant === 'fab';
@@ -131,7 +132,8 @@ export function BasicElement({ node }: { node: UiNode }) {
       );
     case 'emptyState':
     case 'errorState': {
-      const stateType = node.type === 'errorState' ? 'error' : node.props.stateType ?? 'empty';
+      const nodeType = node.type as string;
+      const stateType = nodeType === 'errorState' ? 'error' : node.props.stateType ?? 'empty';
       const StateIcon =
         stateType === 'error' ? AlertCircle : stateType === 'success' ? CheckCircle2 : Inbox;
       return (

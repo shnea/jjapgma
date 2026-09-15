@@ -51,6 +51,20 @@ class PagesController {
       ),
     );
   }
+  @Get('pages/:pageId/revisions') listRevisions(
+    @Req() r: AuthRequest,
+    @Param('pageId') id: string,
+  ) {
+    return this.pages.listRevisions(parse(uuid, id), r.identity.id);
+  }
+  @Get('pages/:pageId/revisions/:revision') getRevision(
+    @Req() r: AuthRequest,
+    @Param('pageId') id: string,
+    @Param('revision') rev: string,
+  ) {
+    const revisionNumber = parse(z.coerce.number().int().min(1), rev);
+    return this.pages.getRevision(parse(uuid, id), r.identity.id, revisionNumber);
+  }
 }
 @Module({ imports: [AuthModule], providers: [PagesService], controllers: [PagesController] })
 export class PagesModule {}
