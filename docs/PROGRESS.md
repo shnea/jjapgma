@@ -39,7 +39,7 @@
 - Docker 빌드: API·Nginx·Storybook 테스트 이미지 성공.
 - `npm run lint`: 0 warnings, 0 errors. `npm run typecheck`: 성공.
 - 최종 수정(드래그 추가 후 자동 선택 포함) 후 전체 20개 재검사 통과. 개발 이미지를 다시 빌드하고 `docker compose -f compose.dev.yaml up -d --wait` 적용, Nginx/API/DB healthy 확인. Docker에서 실제 호스트 30137 `/api/health` 호출은 200/ok. 개발 DB 볼륨 보존, 테스트 환경 정리 완료.
-- 이번 변경은 작업 트리에 있으며 아직 커밋/원격 push/registry 발행하지 않았습니다. 이전 초기 구현 커밋은 ab76d96입니다.
+- 이번 변경사항은 커밋 `3cafc32`로 완료하고 원격 저장소(`origin main`)로 푸시되었습니다. (초기 커밋: `ab76d96`)
 
 이번 검증 중 파일 테스트의 UUID/text 중복 파라미터 오류와 파일 요소 표시명 불일치를 수정했습니다. 초기 작업에서는 Nest AuthGuard 의존성·HTTP origin의 crypto.randomUUID·Storybook 정적 서버 경로도 수정했습니다. PowerShell 기본 실행 정책으로 `./scripts/verify.ps1` 직접 호출은 차단되었지만 동일 Docker Compose 명령으로 검사했습니다. Storybook 빌드의 큰 chunk 안내는 남아 있으며 빌드는 성공합니다.
 
