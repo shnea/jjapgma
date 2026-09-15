@@ -1,0 +1,61 @@
+name: jjapgma-test
+services:
+  db:
+    image: postgres:17-bookworm@sha256:051f7b7b3abdd564d5d1bd1e8c4b9c1b6e77087d1dd22020ede611c096a272e0
+    environment:
+      POSTGRES_DB: jjapgma_test
+      POSTGRES_USER: jjapgma
+      POSTGRES_PASSWORD: isolated-test-only
+    tmpfs: ['/var/lib/postgresql/data']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U jjapgma -d jjapgma_test']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  migrate:
+    image: jjapgma-api:test
+    build: { context: ., target: api }
+    environment:
+      DATABASE_URL: postgres://jjapgma:isolated-test-only@db:5432/jjapgma_test
+    command: ['node', 'apps/api/dist/database/migrate.js']
+    depends_on: { db: { condition: service_healthy } }
+  api:
+    image: jjapgma-api:test
+    build: { context: ., target: api }
+    environment:
+      NODE_ENV: test
+      APP_URL: http://nginx:8080
+      DEV_AUTH_BYPASS: 'true'
+      DATABASE_URL: postgres://jjapgma:isolated-test-only@db:5432/jjapgma_test
+    depends_on: { migrate: { condition: service_completed_successfully } }
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+  nginx:
+    image: jjapgma-nginx:test
+    build: { context: ., target: nginx }
+    depends_on: { api: { condition: service_healthy } }
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:8080/api/health']
+      interval: 3s
+      timeout: 5s
+      retries: 20
+  test:
+    image: jjapgma-tests:local
+    build: { context: ., target: test }
+    init: true
+    shm_size: 1gb
+    environment:
+      CI: 'true'
+      BASE_URL: http://nginx:8080
+      DATABASE_URL: postgres://jjapgma:isolated-test-only@db:5432/jjapgma_test
+    depends_on: { nginx: { condition: service_healthy } }
+    volumes: ['./test-results:/app/test-results']

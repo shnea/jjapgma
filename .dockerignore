@@ -1,0 +1,13 @@
+.git
+.idea
+.env
+.env.*
+node_modules
+**/node_modules
+**/dist
+**/storybook-static
+test-results
+playwright-report
+docs
+eocs
+base.md

@@ -1,0 +1,63 @@
+name: jjapgma
+services:
+  db:
+    image: postgres:17-bookworm@sha256:051f7b7b3abdd564d5d1bd1e8c4b9c1b6e77087d1dd22020ede611c096a272e0
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: jjapgma
+      POSTGRES_USER: jjapgma
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+    ports: ['${DB_BIND_ADDRESS:-127.0.0.1}:${DB_HOST_PORT:-30138}:5432']
+    volumes: ['db-data:/var/lib/postgresql/data']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U jjapgma -d jjapgma']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  migrate:
+    image: ${REGISTRY:-registry.shnea.kr}/jjapgma/api:${IMAGE_TAG:?Set IMAGE_TAG}
+    platform: linux/amd64
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL}
+    command: ['node', 'apps/api/dist/database/migrate.js']
+    depends_on: { db: { condition: service_healthy } }
+  api:
+    image: ${REGISTRY:-registry.shnea.kr}/jjapgma/api:${IMAGE_TAG:?Set IMAGE_TAG}
+    platform: linux/amd64
+    restart: unless-stopped
+    init: true
+    environment:
+      NODE_ENV: production
+      APP_URL: https://jjapgma.shnea.kr
+      DEV_AUTH_BYPASS: 'false'
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-jjapgma-web}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:?Set OIDC_CLIENT_SECRET}
+      OIDC_SCOPE: ${OIDC_SCOPE:-openid profile basic offline_access}
+      REFRESH_TOKEN_ENCRYPTION_KEY: ${REFRESH_TOKEN_ENCRYPTION_KEY:?Set 64 hex characters}
+    depends_on: { migrate: { condition: service_completed_successfully } }
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    stop_grace_period: 30s
+  nginx:
+    image: ${REGISTRY:-registry.shnea.kr}/jjapgma/nginx:${IMAGE_TAG:?Set IMAGE_TAG}
+    platform: linux/amd64
+    restart: unless-stopped
+    ports: ['${NGINX_BIND_ADDRESS:-0.0.0.0}:${NGINX_HTTP_PORT:-30137}:8080']
+    depends_on: { api: { condition: service_healthy } }
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:8080/api/health']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+volumes:
+  db-data:

@@ -1,0 +1,39 @@
+# 실제 비밀값과 로컬 환경
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.key
+*.pem
+*.p12
+*.pfx
+*.jks
+*.keystore
+
+# 의존성·생성물
+node_modules/
+dist/
+coverage/
+storybook-static/
+.vite/
+.cache/
+*.tsbuildinfo
+*.log
+
+# 테스트 보고서
+test-results/
+playwright-report/
+blob-report/
+
+# 로컬 데이터·덤프
+docker-data/
+*.sqlite
+*.sqlite3
+*.dump
+*.bak
+
+# 개인 편집기·OS 파일
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

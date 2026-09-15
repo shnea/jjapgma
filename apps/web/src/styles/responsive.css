@@ -1,0 +1,126 @@
+@media (min-width: 1600px) {
+  .project-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .project-thumbnail {
+    height: 210px;
+  }
+}
+@media (max-width: 1100px) {
+  .workspace-sidebar {
+    width: 200px;
+  }
+  .workspace-main {
+    margin-left: 200px;
+  }
+  .workspace-top {
+    padding: 0 28px;
+  }
+  .project-section {
+    padding: 40px 28px;
+  }
+  .project-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .left-panel {
+    width: 200px;
+  }
+  .right-panel {
+    width: 235px;
+  }
+  .save-status {
+    display: none;
+  }
+  .login-visual {
+    opacity: 0.45;
+    right: -10%;
+  }
+}
+@media (max-width: 700px) {
+  .workspace-sidebar {
+    position: static;
+    width: auto;
+    padding: 16px;
+    flex-direction: row;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    align-items: center;
+    gap: 20px;
+  }
+  .workspace {
+    display: block;
+  }
+  .workspace-main {
+    margin-left: 0;
+  }
+  .workspace-switch,
+  .nav-label,
+  .sidebar-note,
+  .workspace-sidebar nav {
+    display: none;
+  }
+  .logout {
+    margin: 0 0 0 auto;
+    border: 0;
+    width: auto;
+    padding: 8px;
+  }
+  .workspace-top {
+    height: 55px;
+    padding: 0 20px;
+  }
+  .project-section {
+    padding: 30px 20px;
+  }
+  .section-title {
+    align-items: flex-start;
+  }
+  .section-title h1 {
+    font-size: 25px;
+  }
+  .section-title p {
+    max-width: 180px;
+    line-height: 1.7;
+  }
+  .project-grid {
+    grid-template-columns: 1fr;
+  }
+  .project-filters .search-box {
+    width: 160px;
+  }
+  .workspace-footer {
+    line-height: 1.8;
+    gap: 20px;
+  }
+  .create-project {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .login-page {
+    padding: 30px 24px;
+  }
+  .login-content {
+    margin-top: 14vh;
+  }
+  .login-content h1 {
+    font-size: 38px;
+  }
+  .login-visual {
+    display: none;
+  }
+  .login-content p {
+    font-size: 13px;
+  }
+  .login-page footer {
+    margin-top: 8vh;
+  }
+  .editor-shell {
+    min-width: 820px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
