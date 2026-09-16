@@ -1,10 +1,29 @@
 import { expect, type Page } from '@playwright/test';
 import type { UiSpec } from '@jjapgma/ui-spec';
+import { randomUUID, createHash } from 'node:crypto';
+import pg from 'pg';
+
 export async function openSpec(page: Page, spec: UiSpec, name: string) {
-  await page.goto('/');
-  const login = page.waitForResponse('/api/auth/dev');
-  await page.getByRole('button', { name: '개발용 워크스페이스 열기' }).click();
-  expect((await login).ok()).toBe(true);
+  // Screen tests need isolated accounts; builder.spec.ts covers the login UI.
+  const db = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+  const userId = randomUUID(),
+    token = randomUUID(),
+    csrf = randomUUID();
+  try {
+    await db.query(
+      'INSERT INTO users(id,issuer,subject,display_name) VALUES($1::uuid,$2,$1::text,$3)',
+      [userId, 'jjapgma:development', '화면 검증 사용자'],
+    );
+    await db.query(
+      "INSERT INTO sessions(token_hash,user_id,csrf_token,expires_at) VALUES($1,$2,$3,now()+interval '1 hour')",
+      [createHash('sha256').update(token).digest('hex'), userId, csrf],
+    );
+  } finally {
+    await db.end();
+  }
+  await page
+    .context()
+    .addCookies([{ name: 'jjapgma_session', value: token, url: process.env.BASE_URL! }]);
   const identityResponse = await page.request.get('/api/auth/me');
   expect(identityResponse.ok()).toBe(true);
   const identity = await identityResponse.json();

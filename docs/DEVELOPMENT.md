@@ -31,8 +31,8 @@ LAN의 프록시가 개발 앱에 접속해야 하면 `.env`에 `NGINX_BIND_ADDR
 - npm run lint: oxlint.
 - npm run typecheck: 공통 명세/API/웹 타입 검사.
 - npm test: 잘못된 트리, 순환 이동, 중복 ID, 부모 잠금, 반응형, 입력 제한.
-- npm run test:api: 실제 PostgreSQL과 HTTP로 미인증/권한/CSRF/격리/충돌/마이그레이션 검사.
-- npm run test:e2e: Chromium에서 프로젝트 생성 → 페이지 편집 → 반응형 → 저장 → 새로고침.
+- npm run test:api: 실제 PostgreSQL과 HTTP로 미인증/권한/CSRF/격리/충돌/마이그레이션 검사. 같은 Nginx 요청 제한을 공유하므로 파일은 `--test-concurrency=1`로 순차 실행합니다. 전체 발행 검사에도 같은 명령을 사용하며 운영 요청 제한은 완화하지 않습니다.
+- npm run test:e2e: Chromium에서 프로젝트 생성 → 페이지 편집 → 반응형 → 저장 → 새로고침. 공통 `openSpec`은 테스트 DB에 독립 계정·세션을 준비해 화면 검사끼리 계정 상태와 로그인 요청 한도를 공유하지 않습니다. 로그인 버튼부터 시작하는 검사는 별도로 유지합니다.
 - 추가 회귀: 캔버스 기존 요소의 순서/부모 이동·잠금·복원, 64종 카탈로그, 첨부 업로드/한글 파일명/프로젝트 참조. 테스트 Compose의 file-service는 격리된 계약 fixture이며 개발/운영에는 포함하지 않습니다. 외부 실 연동은 별도 확인합니다.
 - npm run test:stories: 실제 Storybook 산출물의 입력·disabled·키보드·반응형과 axe 접근성 검사.
 - 산출물: test-results/의 screenshot, 실패 trace. Git에서 제외합니다.

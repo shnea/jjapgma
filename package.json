@@ -15,7 +15,7 @@
     "typecheck": "tsc -p packages/ui-spec && tsc -p apps/api --noEmit && tsc -p apps/web --noEmit",
     "build": "tsc -p packages/ui-spec && tsc -p apps/api && vite build --config apps/web/export.vite.config.ts && vite build --config apps/web/vite.config.ts",
     "test": "tsx --test packages/ui-spec/src/*.test.ts",
-    "test:api": "node --test tests/api/*.test.mjs",
+    "test:api": "node --test --test-concurrency=1 tests/api/*.test.mjs",
     "test:e2e": "playwright test --config tests/playwright.config.ts",
     "storybook": "storybook dev -p 6006 --config-dir apps/web/.storybook",
     "build-storybook": "storybook build --config-dir apps/web/.storybook --output-dir apps/web/storybook-static",
