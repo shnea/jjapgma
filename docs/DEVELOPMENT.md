@@ -38,6 +38,7 @@ LAN의 프록시가 개발 앱에 접속해야 하면 `.env`에 `NGINX_BIND_ADDR
 - 산출물: test-results/의 screenshot, 실패 trace. Git에서 제외합니다.
 - 컨트롤 회귀: 달력 시·분 표시와 숨겨진 값, 오늘/취소, 표 행·열 설정 저장, 모바일 스타일 상속, 라디오 라벨 위치, 스켈레톤, 고정 화살표, 확대된 캔버스 드롭을 검사합니다.
 - HTML 내보내기는 ZIP을 풀고 offline Chromium에서 file://index.html을 열어 CSS·이미지·스크립트·반응형 동작을 검증합니다.
+- Storybook 내보내기는 실제 다운로드 ZIP을 풀고 테스트 이미지의 고정 의존성으로 정적 Storybook을 빌드합니다. 복수 페이지·미저장 편집·전체 Registry/공식 및 개인 템플릿·업로드 이미지 원본을 확인하고 외부 요청을 차단한 브라우저에서 모든 기본 Story와 입력·팝업을 실행합니다. 검사는 `tests/e2e/storybook-export.spec.ts`입니다.
 
 검증 결과와 미검증 항목은 PROGRESS.md에 기록합니다. mock/개발 우회와 실제 외부 로그인 성공을 혼동하지 않습니다.
 

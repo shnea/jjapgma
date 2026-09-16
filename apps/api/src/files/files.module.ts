@@ -91,6 +91,54 @@ class FilesController {
     if (!row) throw new NotFoundException('첨부파일을 찾을 수 없습니다.');
     return id;
   }
+  @Get('projects/:projectId/files') async list(
+    @Req() request: AuthRequest,
+    @Param('projectId') projectId: string,
+  ) {
+    await projectAccess(this.db.pool, parse(uuid, projectId), request.identity.id);
+    return (
+      await this.db.pool.query(
+        'SELECT file_id AS "fileId",original_name AS name,mime_type AS "mimeType" FROM project_files WHERE project_id=$1 ORDER BY created_at,file_id',
+        [projectId],
+      )
+    ).rows;
+  }
+  @Get('projects/:projectId/files/:fileId/content') async content(
+    @Req() request: AuthRequest,
+    @Param('projectId') projectId: string,
+    @Param('fileId') fileId: string,
+    @Res() response: Response,
+  ) {
+    const id = await this.reference(projectId, fileId, request.identity.id);
+    const bytes = await this.client.content(id, config.UPLOAD_MAX_BYTES);
+    response
+      .set({
+        'Content-Type': 'application/octet-stream',
+        'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff',
+      })
+      .send(bytes);
+  }
+  @Get('templates/:templateId/files/:fileId/content') async templateContent(
+    @Req() request: AuthRequest,
+    @Param('templateId') templateId: string,
+    @Param('fileId') fileId: string,
+    @Res() response: Response,
+  ) {
+    const id = parse(fileIdSchema, fileId);
+    const result = await this.db.pool.query(
+      'SELECT f.file_id FROM template_files f JOIN personal_templates t ON t.id=f.template_id WHERE t.id=$1 AND t.user_id=$2 AND f.file_id=$3',
+      [parse(uuid, templateId), request.identity.id, id],
+    );
+    if (!result.rowCount) throw new NotFoundException('첨부파일을 찾을 수 없습니다.');
+    response
+      .set({
+        'Content-Type': 'application/octet-stream',
+        'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff',
+      })
+      .send(await this.client.content(id, config.UPLOAD_MAX_BYTES));
+  }
   @Get('projects/:projectId/files/:fileId/preview') async preview(
     @Req() request: AuthRequest,
     @Param('projectId') projectId: string,

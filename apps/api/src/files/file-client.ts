@@ -76,4 +76,23 @@ export class FileClient {
   downloadUrl(fileId: string) {
     return `${this.baseUrl}/files/download/${encodeURIComponent(fileId)}`;
   }
+  async content(fileId: string, maxBytes: number) {
+    const response = await this.call(`/files/download/${encodeURIComponent(fileId)}`);
+    const reader = response.body?.getReader();
+    if (!reader) throw new BadGatewayException('파일 본문이 없습니다.');
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        size += value.length;
+        if (size > maxBytes) throw new HttpException('내보낼 파일 크기 제한을 초과했습니다.', 413);
+        chunks.push(value);
+      }
+      return Buffer.concat(chunks);
+    } finally {
+      await reader.cancel();
+    }
+  }
 }

@@ -873,19 +873,35 @@ function PageEditorContent({
                 <div className="export-option-info">
                   <h4>스토리북 내보내기 (.zip)</h4>
                   <p>
-                    npm i && npm run storybook(6006 포트)으로 바로 실행 가능한 독립 실행 환경 ZIP
-                    패키지를 다운로드합니다.
+                    프로젝트의 모든 페이지·이미지, 전체 컴포넌트, 공식·개인 템플릿을 포함합니다.
+                    현재 페이지의 저장 전 변경도 담습니다. 압축을 풀고 npm install 후 npm run
+                    storybook으로 실행하세요.
                   </p>
                 </div>
                 <Button
                   variant="primary"
                   aria-label="스토리북 내보내기"
-                  onClick={() => {
-                    exportToStorybook(name, spec);
-                    setShowExportModal(false);
+                  disabled={exporting}
+                  onClick={async () => {
+                    setExporting(true);
+                    try {
+                      await exportToStorybook({
+                        id: initial.id,
+                        project_id: initial.project_id,
+                        name,
+                        spec,
+                      });
+                      setShowExportModal(false);
+                    } catch (e) {
+                      setError(errorMessage(e));
+                      setShowExportModal(false);
+                    } finally {
+                      setExporting(false);
+                    }
                   }}
                 >
-                  <FileCode size={14} style={{ marginRight: 6 }} /> 내보내기
+                  <FileCode size={14} style={{ marginRight: 6 }} />{' '}
+                  {exporting ? '파일 모으는 중…' : '내보내기'}
                 </Button>
               </div>
 

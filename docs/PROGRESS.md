@@ -2,6 +2,14 @@
 
 마지막 갱신: 2026-09-16. **전체 제품 완성이 아니라 Phase 1의 첫 동작 가능한 구현 단계입니다.** 다음 세션은 이 문서 → PROJECT_SETUP.md → 변경 영역의 코드/지침 순서로 시작합니다.
 
+## 2026-09-16 실제 Storybook 프로젝트 내보내기
+
+- JSON 원문만 표시하던 내보내기를 교체했습니다. 프로젝트의 모든 활성 페이지(현재 페이지는 미저장 변경 포함), Registry 46종, 공식 템플릿 22개와 계정의 개인 템플릿을 실제 CSF Story로 구성합니다. 각 항목은 Desktop/Tablet/Mobile과 명세 Controls를 제공하고 분류별로 탐색합니다.
+- 앱과 동일한 NodeRenderer·스타일을 React 외부 의존 ESM으로 빌드합니다. 프로젝트 전체 업로드 이미지와 화면·표·템플릿의 이미지/첨부를 ZIP에 복사하고 이미지 목록도 제공합니다. 파일 연동 지침의 다운로드 계약을 사용하며 신규 본문 경로는 프로젝트/템플릿 권한, 파일 참조, 크기·시간 제한을 검사합니다. 서버 저장·토큰 내보내기·임의 URL 서버 프록시는 없습니다.
+- 다운로드 ZIP의 독립 Storybook 빌드 후 모든 기본 Story를 브라우저로 열고 이미지 원본 일치, 복수 페이지·개인 템플릿, 입력·다이얼로그, 모바일을 검사했습니다. 외부 요청 차단 상태에서 동작하며 화면 스크린샷도 확인했습니다. 최초 검사에서 Storybook ID 소문자 변환 불일치를 수정했습니다.
+- `scripts/verify.ps1` 정상 종료: lint 0 warnings/errors, typecheck, 단위 21 + API 41 + E2E 31 + Story 43 = 136개 통과. 정적 빌드는 테스트 이미지의 설치된 고정 의존성을 사용했고 새 환경에서 npm install까지 재수행한 검사는 아닙니다. 실제 외부 파일 서비스의 신규 본문 요청은 별도 사용자 확인 대상이며 모의 연동의 권한·본문·제한 검사는 통과했습니다.
+- 활성 AI 0건 확인 후 개발 API/Nginx 반영, 서비스 healthy, 실제 HTTPS health·새 렌더러 JS/CSS 200. 새 환경변수·DB 마이그레이션은 없습니다. Registry 발행·운영 배포는 수행하지 않았습니다. 사용법과 파일 한도는 [Storybook 내보내기](STORYBOOK_EXPORT.md). 작업 중 추가된 사용자 `compose.build.yaml`은 이 변경에 포함하지 않습니다.
+
 ## 2026-09-16 발행 전 전체 검증 안정화
 
 - `publish.ps1`이 호출하는 전체 검증에서 API 파일들이 병렬 실행되어 같은 Nginx 요청 한도를 소진했습니다. 429 응답이 MCP 오류와 JSON 해석 실패로 이어지는 것을 재현했고 `test:api`를 파일 단위 순차 실행으로 수정했습니다. 운영 요청 제한은 변경하지 않았습니다.
@@ -321,7 +329,7 @@
 | Phase 3 Development Integration | 미착수. 사용자 설계 Storybook Export, MCP Read/Write, AI Panel, n8n 도구 연동, 원자적 UI Patch, AI Preview/Apply, Action/Binding, Import/Export |
 | Phase 4 Collaboration | 미착수. Presence·실시간 공동 편집/CRDT |
 
-현재 개발용 Storybook은 **사용자가 만든 화면을 내보내는 Storybook Export 기능과 다릅니다.** 페이지 JSON 다운로드는 로컬 변경 보존용이며 프로젝트 전체 Import/Export 완료를 뜻하지 않습니다.
+개발용 Storybook과 별도로 사용자 프로젝트·컴포넌트·템플릿을 포함하는 [Storybook Export](STORYBOOK_EXPORT.md)를 제공합니다. 이는 독립 미리보기 패키지이며 프로젝트 데이터의 전체 백업/재가져오기 기능과는 구분합니다.
 
 ## 외부 의존·운영 대기
 

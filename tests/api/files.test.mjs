@@ -62,6 +62,21 @@ test('file proxy enforces session, owner context, content checks and persisted p
     .rows;
   assert.equal(stored.length, 1);
   assert.equal(stored[0].file_id, reference.fileId);
+  assert.equal((await fetch(`${base}/api/projects/${project.id}/files`)).status, 401);
+  assert.equal((await jsonRequest(`/projects/${project.id}/files`, outsider)).status, 404);
+  assert.deepEqual(await (await jsonRequest(`/projects/${project.id}/files`, viewer)).json(), [
+    reference,
+  ]);
+  const contentPath = `/projects/${project.id}/files/${reference.fileId}/content`;
+  assert.equal((await jsonRequest(contentPath, outsider)).status, 404);
+  assert.equal(
+    (await jsonRequest(`/projects/${project.id}/files/missing/content`, owner)).status,
+    404,
+  );
+  const content = await jsonRequest(contentPath, viewer);
+  assert.equal(content.status, 200);
+  assert.match(content.headers.get('cache-control'), /\bno-store\b/);
+  assert.equal(await content.text(), 'hello');
   const preview = await (
     await jsonRequest(`/projects/${project.id}/files/${reference.fileId}/preview`, owner)
   ).json();
@@ -93,6 +108,16 @@ test('file proxy enforces session, owner context, content checks and persisted p
       body: JSON.stringify({ name: page.name, spec: page.spec, baseRevision: revision }),
     });
   assert.equal((await save(1)).status, 200);
+  const template = await (
+    await jsonRequest('/templates', owner, {
+      name: '파일 내보내기 템플릿',
+      sourcePageId: page.id,
+      spec: page.spec,
+    })
+  ).json();
+  const templateContent = `/templates/${template.id}/files/${reference.fileId}/content`;
+  assert.equal(await (await jsonRequest(templateContent, owner)).text(), 'hello');
+  assert.equal((await jsonRequest(templateContent, viewer)).status, 404);
   assert.deepEqual(
     (await (await jsonRequest(`/pages/${page.id}`, owner)).json()).spec.root.children[0].props
       .attachment,
@@ -100,6 +125,21 @@ test('file proxy enforces session, owner context, content checks and persisted p
   );
   node.props.attachment.fileId = 'unregistered';
   assert.equal((await save(2)).status, 400);
+});
+
+test('export file content enforces byte limits and never follows redirects or sends upload credentials', async () => {
+  const client = new FileClient(
+    'https://files.invalid',
+    'private-upload-token',
+    async (url, options) => {
+      assert.equal(url, 'https://files.invalid/files/download/file-1');
+      assert.equal(options.redirect, 'error');
+      assert.equal(options.headers, undefined);
+      return new Response('123456');
+    },
+  );
+  await assert.rejects(client.content('file-1', 5), (error) => error.getStatus() === 413);
+  assert.equal((await client.content('file-1', 6)).toString(), '123456');
 });
 
 test('file client uses multipart and keeps missing credentials, provider failures and malformed responses explicit', async () => {

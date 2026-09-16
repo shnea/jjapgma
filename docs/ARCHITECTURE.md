@@ -34,6 +34,7 @@ React 웹 + NestJS 모듈형 단일 API + PostgreSQL. 기능을 파일·모듈�
 - Registry는 렌더링 함수와 분리된 컴포넌트 정의입니다. Inspector의 내용 속성은 스키마에서 생성합니다. 모양/배치 공통 편집기는 현재 직접 구성하며 향후 스키마화를 확장합니다.
 - Canvas와 Preview는 동일 NodeRenderer와 Spec을 사용합니다. Layer Tree·Inspector도 같은 상태를 편집합니다.
 - HTML ZIP도 같은 NodeRenderer를 사용합니다. export/runtime.tsx를 별도 IIFE 스크립트와 CSS로 빌드하여 파일로 바로 실행합니다. 수작업 HTML 렌더러와의 스타일/동작 불일치를 없앴습니다. 빌드 설정은 [Vite Library Mode](https://vite.dev/guide/build.html#library-mode)를 따릅니다.
+- Storybook ZIP은 StorybookScreen에서 같은 NodeRenderer를 React 외부 의존 ESM/CSS로 빌드해 제공합니다. 현재 프로젝트 모든 페이지·전체 Registry·공식/개인 템플릿을 CSF Story로 생성하고 권한 확인 후 복사한 파일을 staticDirs에 포함합니다. [범위와 실행](STORYBOOK_EXPORT.md).
 - 날짜 표시와 폼 값, 표 크기, 반응형 및 ZIP 계약은 [컨트롤 동작](UI_CONTROLS.md)을 따릅니다. 새 속성은 선택 사항으로 추가하여 기존 schemaVersion 1 문서를 유지합니다.
 - 현재 UI Spec은 schemaVersion 1, root container. 최대 2,000 nodes, 깊이 40, ID 유일성, 자식 허용 규칙과 style allowlist를 검증합니다.
 - 표의 선택적 `props.table`은 열 ID 기반 셀 데이터, 기기별 숨김, 셀 종류와 표시 설정을 함께 보관합니다. `packages/ui-spec/src/table.ts`가 기존 줄/파이프 데이터 변환과 검증을 담당하며 중복 ID·없는 열 참조·허용 범위 밖 설정을 거부합니다. DB 마이그레이션 없이 페이지/버전/개인 템플릿 JSON에 포함합니다.
