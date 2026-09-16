@@ -256,6 +256,9 @@ function RenderNode({
       data-carousel-fixed-height={
         node.type === 'carousel' && value.height && value.height !== 'auto' ? 'true' : undefined
       }
+      data-image-fixed-height={
+        node.type === 'image' && value.height && value.height !== 'auto' ? 'true' : undefined
+      }
       data-self-stretch={value.alignSelf === 'stretch' ? 'true' : undefined}
       data-overflow-x={value.overflowX ?? value.overflow}
       data-page-theme={(root || overlay) && theme ? 'true' : undefined}

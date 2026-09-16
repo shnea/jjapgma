@@ -6,10 +6,19 @@ import { ContentFields } from './controls/ContentFields';
 function Gallery() {
   const [template, setTemplate] = useState('pricing');
   const [device, setDevice] = useState<Breakpoint>('desktop');
+  const [editing, setEditing] = useState(false);
   const spec = useMemo(() => createTemplate(template), [template]);
   return (
     <main>
       <div style={{ display: 'flex', gap: 16, padding: 16, flexWrap: 'wrap' }}>
+        <label>
+          <input
+            type="checkbox"
+            checked={editing}
+            onChange={(event) => setEditing(event.target.checked)}
+          />
+          편집 모드
+        </label>
         <label>
           화면 선택
           <select value={template} onChange={(event) => setTemplate(event.target.value)}>
@@ -42,7 +51,7 @@ function Gallery() {
           node={spec.root}
           theme={spec.theme}
           breakpoint={device}
-          preview
+          preview={!editing}
           root
         />
       </div>

@@ -23,6 +23,7 @@ test('downloaded ZIP runs renderer styles and interactions offline from index.ht
     image = createNode('image'),
     text = createNode('text');
   date.props.includeTime = true;
+  image.style.height = '180px';
   table.props.items =
     '이름|상태\n' + Array.from({ length: 12 }, (_, n) => '사용자' + (n + 1) + '|활성').join('\n');
   table.props.paginationMode = 'pagination';
@@ -188,6 +189,11 @@ test('downloaded ZIP runs renderer styles and interactions offline from index.ht
     '3px',
   );
   await expect(exported.getByTestId('node-image').locator('img')).toBeVisible();
+  const imageFrame = (await exported.getByTestId('node-image').boundingBox())!;
+  const imageContent = (await exported.getByTestId('node-image').locator('img').boundingBox())!;
+  const nextText = (await exported.locator(`[data-node-id="${text.id}"]`).boundingBox())!;
+  expect(imageContent.height).toBeCloseTo(imageFrame.height, 0);
+  expect(imageContent.y + imageContent.height).toBeLessThanOrEqual(nextText.y);
   await expect(exported.locator('.configured-table thead th')).toHaveCount(4);
   await expect(exported.locator('.configured-table .table-badge')).toHaveCount(2);
   await expect(exported.locator('.configured-table .table-cell-image')).toBeVisible();

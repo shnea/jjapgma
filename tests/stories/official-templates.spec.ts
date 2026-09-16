@@ -46,6 +46,41 @@ test('all official templates render within desktop and mobile canvases', async (
   }
   expect(errors).toEqual([]);
 });
+test('content detail image stays inside its frame above the article in editor and preview', async ({
+  page,
+}, info) => {
+  await story(page, 'Gallery');
+  await page.getByLabel('화면 선택').selectOption('content-detail');
+  for (const device of ['desktop', 'mobile']) {
+    await page.getByLabel('화면 크기').selectOption(device);
+    for (const editing of [false, true]) {
+      await page.getByLabel('편집 모드').setChecked(editing);
+      const frame = page.locator('.official-template-preview .render-image');
+      const picture = frame.locator('img');
+      await expect(picture).toBeVisible();
+      await expect
+        .poll(() =>
+          picture.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0),
+        )
+        .toBe(true);
+      const frameBox = (await frame.boundingBox())!;
+      const imageBox = (await picture.boundingBox())!;
+      const textBox = (await page
+        .getByText('아이디어를 화면으로 옮기는 방법', { exact: true })
+        .boundingBox())!;
+      expect(
+        Math.abs(imageBox.height - frameBox.height),
+        `${device} editing=${editing}`,
+      ).toBeLessThanOrEqual(1);
+      expect(imageBox.y + imageBox.height).toBeLessThanOrEqual(textBox.y);
+      await page.screenshot({
+        path: info.outputPath(`content-detail-${device}-${editing ? 'editor' : 'preview'}.png`),
+        fullPage: true,
+      });
+    }
+  }
+});
+
 test('wizard preserves inputs between steps and table search filters actual rows', async ({
   page,
 }) => {
