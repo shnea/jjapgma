@@ -71,6 +71,40 @@ export function ChartElement({ node }: { node: UiNode }) {
                 </text>
               </svg>
             </div>
+          ) : variant === 'horizontalBar' ? (
+            <svg
+              className="chart-plot"
+              viewBox={`0 0 660 ${Math.max(120, data.length * 40 + 32)}`}
+              role="img"
+              aria-label={node.props.text || '차트'}
+            >
+              {data.map((point, index) => (
+                <g key={index}>
+                  <text x="120" y={index * 40 + 35} textAnchor="end" className="chart-caption">
+                    {point.label.length > 10 ? point.label.slice(0, 9) + '…' : point.label}
+                  </text>
+                  <rect
+                    x="134"
+                    y={index * 40 + 18}
+                    width={(400 * point.value) / maximum}
+                    height="26"
+                    rx="4"
+                    fill="var(--page-primary, #466e2c)"
+                  >
+                    <title>
+                      {point.label}: {formatted(point.value)}
+                    </title>
+                  </rect>
+                  <text
+                    x={144 + (400 * point.value) / maximum}
+                    y={index * 40 + 35}
+                    className="chart-caption"
+                  >
+                    {point.value.toLocaleString('ko-KR', { notation: 'compact' })}
+                  </text>
+                </g>
+              ))}
+            </svg>
           ) : (
             <svg
               className="chart-plot"
@@ -95,7 +129,15 @@ export function ChartElement({ node }: { node: UiNode }) {
                   </text>
                 </g>
               ))}
-              {variant === 'line' && (
+              {variant === 'area' && (
+                <polygon
+                  className="chart-area"
+                  points={`${points[0].x},220 ${points.map((p) => `${p.x},${p.y}`).join(' ')} ${points[points.length - 1].x},220`}
+                  fill="var(--page-primary, #466e2c)"
+                  fillOpacity="0.18"
+                />
+              )}
+              {(variant === 'line' || variant === 'area') && (
                 <polyline
                   points={points.map((p) => `${p.x},${p.y}`).join(' ')}
                   fill="none"

@@ -26,7 +26,7 @@ export function TemplatePanel({
   disabled?: boolean;
   insertDisabled?: boolean;
   targetName: string;
-  onInsert: (spec: UiSpec, name: string) => boolean;
+  onInsert: (spec: UiSpec, name: string, edgeToEdge?: boolean) => boolean;
 }) {
   const [scope, setScope] = useState<'official' | 'personal'>('official');
   const [query, setQuery] = useState('');
@@ -94,7 +94,10 @@ export function TemplatePanel({
             body: JSON.stringify({ projectId }),
           })
         : preview;
-      if (active.current && onInsert(value.spec, preview.name)) {
+      if (
+        active.current &&
+        onInsert(value.spec, preview.name, !preview.personal && preview.id === 'main')
+      ) {
         setPreview(undefined);
         setNotice('템플릿을 추가했습니다. 실행 취소로 되돌릴 수 있습니다.');
       }

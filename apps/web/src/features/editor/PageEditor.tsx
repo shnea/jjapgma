@@ -20,6 +20,8 @@ import { exportToJson, exportToHtml, exportToStorybook } from './export/exporter
 import {
   cloneNode,
   createNode,
+  createGrid,
+  resizeGrid,
   editSpec,
   findNode,
   findParent,
@@ -315,7 +317,7 @@ function PageEditorContent({
       (registry[selected.type].children
         ? selected.id
         : (findParent(spec.root, selected.id)?.id ?? spec.root.id));
-    const node = createNode(type, Boolean(spec.theme));
+    const node = type === 'grid' ? createGrid() : createNode(type, Boolean(spec.theme));
     change(() => insertNode(spec, parent, node));
     setSelected(node.id);
   }
@@ -342,6 +344,15 @@ function PageEditorContent({
         const target = breakpoint === 'desktop' ? node.style : (node.responsive[breakpoint] ??= {});
         target.width = `${Math.min(2560, width)}px`;
         target.height = `${Math.min(1600, height)}px`;
+      }),
+    );
+  }
+  function resizeGridStructure(id: string, columns: number, rows: number) {
+    change(() =>
+      editSpec(spec, (root) => {
+        const node = findNode(root, id);
+        if (!node || isLocked(root, id)) throw new Error('잠긴 그리드는 변경할 수 없습니다.');
+        resizeGrid(node, columns, rows);
       }),
     );
   }
@@ -623,11 +634,26 @@ function PageEditorContent({
                   disabled={readOnly || conflict}
                   insertDisabled={isLocked(spec.root, templateTarget.id)}
                   targetName={templateTarget.name}
-                  onInsert={(template, templateName) => {
+                  onInsert={(template, templateName, edgeToEdge) => {
                     if (readOnly || conflict) return false;
                     const node = cloneNode(template.root);
                     node.name = templateName;
-                    const next = insertNode(spec, templateTarget.id, node);
+                    let next = insertNode(spec, templateTarget.id, node);
+                    if (edgeToEdge && templateTarget.id === spec.root.id) {
+                      next = editSpec(next, (root) => {
+                        const edge = {
+                          padding: 0,
+                          paddingTop: 0,
+                          paddingRight: 0,
+                          paddingBottom: 0,
+                          paddingLeft: 0,
+                          gap: 0,
+                        };
+                        Object.assign(root.style, edge);
+                        for (const device of ['tablet', 'mobile'] as const)
+                          Object.assign((root.responsive[device] ??= {}), edge);
+                      });
+                    }
                     dispatch({ type: 'edit', spec: next });
                     setSelected(node.id);
                     setError('');
@@ -692,6 +718,7 @@ function PageEditorContent({
                   onSelect={setSelected}
                   onDrop={readOnly ? undefined : drop}
                   onResize={readOnly ? undefined : resize}
+                  onGridResize={readOnly || conflict ? undefined : resizeGridStructure}
                   preview={preview}
                 />
               </div>

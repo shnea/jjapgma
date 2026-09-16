@@ -1,5 +1,6 @@
 import { registry, type ComponentType } from './registry.js';
 import { createNode, findNode, findParent, insertNode, moveNode } from './tree.js';
+import { createGrid } from './grid.js';
 import type { UiSpec } from './schema.js';
 export type DropPosition = 'before' | 'inside' | 'after';
 export function dropElement(
@@ -28,7 +29,7 @@ export function dropElement(
   }
   if (!value.type || !Object.hasOwn(registry, value.type))
     throw new Error('지원하지 않는 요소입니다.');
-  const node = createNode(value.type, Boolean(spec.theme));
+  const node = value.type === 'grid' ? createGrid() : createNode(value.type, Boolean(spec.theme));
   const next = insertNode(spec, parent.id, node);
   return moveNode(next, node.id, parent.id, index);
 }

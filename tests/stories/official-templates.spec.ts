@@ -37,7 +37,18 @@ test('all official templates render within desktop and mobile canvases', async (
         }),
       );
       expect(overflowingCards, `${template.id} ${device} card contents`).toEqual([]);
-      if (['pricing', 'checkout', 'dashboard', 'onboarding', 'settings'].includes(template.id))
+      if (
+        [
+          'pricing',
+          'checkout',
+          'dashboard',
+          'analytics',
+          'form',
+          'main',
+          'onboarding',
+          'settings',
+        ].includes(template.id)
+      )
         await page.screenshot({
           path: info.outputPath(`${template.id}-${device}.png`),
           fullPage: true,
@@ -113,6 +124,10 @@ test('chart inspector changes variants and data, handles zero and empty datasets
   await expect(page.locator('.chart-values dd').first()).toHaveText('1,200 건');
   await page.getByRole('button', { name: '차트 종류: 꺾은선' }).click();
   await expect(page.locator('.chart-plot polyline')).toHaveCount(1);
+  await page.getByRole('button', { name: '차트 종류: 영역', exact: true }).click();
+  await expect(page.locator('.chart-area')).toHaveCount(1);
+  await page.getByRole('button', { name: '차트 종류: 가로 막대', exact: true }).click();
+  await expect(page.locator('.chart-plot rect')).toHaveCount(6);
   await page.getByRole('button', { name: '차트 종류: 도넛' }).click();
   for (let i = 1; i <= 6; i++) await page.getByLabel(`차트 값 ${i}`, { exact: true }).fill('0');
   await expect(page.locator('.chart-total')).toHaveText('0');
@@ -123,4 +138,63 @@ test('chart inspector changes variants and data, handles zero and empty datasets
   for (let i = 0; i < 6; i++)
     await page.getByRole('button', { name: '차트 항목 1 삭제', exact: true }).click();
   await expect(page.getByText('표시할 데이터가 없습니다.')).toBeVisible();
+});
+
+test('main touches page edges and form uses two desktop columns and one mobile column', async ({
+  page,
+}) => {
+  await story(page, 'Gallery');
+  await page.getByLabel('화면 선택').selectOption('main');
+  for (const device of ['desktop', 'tablet', 'mobile']) {
+    await page.getByLabel('화면 크기').selectOption(device);
+    const geometry = await page
+      .locator('.official-template-preview > .render-node')
+      .evaluate((root) => {
+        const frame = root.getBoundingClientRect();
+        const header = root.firstElementChild!.getBoundingClientRect();
+        const css = getComputedStyle(root);
+        return {
+          x: header.x - frame.x,
+          y: header.y - frame.y,
+          padding: [css.paddingTop, css.paddingRight, css.paddingBottom, css.paddingLeft],
+        };
+      });
+    expect(geometry).toEqual({ x: 0, y: 0, padding: ['0px', '0px', '0px', '0px'] });
+  }
+  await page.getByLabel('화면 선택').selectOption('form');
+  for (const device of ['desktop', 'mobile']) {
+    await page.getByLabel('화면 크기').selectOption(device);
+    const name = (await page.getByLabel('이름', { exact: true }).boundingBox())!;
+    const email = (await page.getByLabel('이메일', { exact: true }).boundingBox())!;
+    if (device === 'desktop') {
+      expect(Math.abs(name.y - email.y)).toBeLessThan(1);
+      expect(email.x).toBeGreaterThan(name.x + name.width);
+      expect(
+        (await page.locator('.official-template-preview .render-card').boundingBox())!.width,
+      ).toBeGreaterThan(800);
+    } else expect(email.y).toBeGreaterThan(name.y + name.height);
+  }
+});
+
+test('grid canvas controls grow and shrink real bordered cells and disappear in preview', async ({
+  page,
+}) => {
+  await story(page, 'Grid');
+  const cells = page.locator('.render-grid > .render-container');
+  await expect(cells).toHaveCount(4);
+  await expect(cells.first()).toHaveCSS('border-top-width', '1px');
+  await page.getByRole('button', { name: '그리드 열 늘리기' }).click();
+  await expect(cells).toHaveCount(6);
+  await page.getByRole('button', { name: '그리드 행 늘리기' }).click();
+  await expect(cells).toHaveCount(9);
+  await page.getByRole('button', { name: '그리드 열 줄이기' }).click();
+  await expect(cells).toHaveCount(6);
+  await page.getByRole('button', { name: '그리드 행 줄이기' }).click();
+  await expect(cells).toHaveCount(4);
+  expect(
+    (await new AxeBuilder({ page }).include('.grid-edit-controls').analyze()).violations,
+  ).toEqual([]);
+  await page.getByLabel('그리드 미리보기').check();
+  await expect(page.getByRole('group', { name: '그리드 영역 조절' })).toHaveCount(0);
+  await expect(cells).toHaveCount(4);
 });

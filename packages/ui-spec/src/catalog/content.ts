@@ -27,7 +27,7 @@ export const contentComponents = {
 
   // 데이터 (Data)
   table: item('테이블', '데이터', '목록', 'table'),
-  chart: item('차트', '데이터', '월별 현황', 'chart-column'),
+  chart: item('차트·그래프', '데이터', '월별 현황', 'chart-column'),
   list: item('목록', '데이터', '목록', 'list'),
   descriptionList: item('설명 목록', '데이터', '상세 정보', 'file-text'),
   badge: item('배지', '데이터', '새 소식', 'tag'),

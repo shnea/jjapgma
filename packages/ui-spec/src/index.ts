@@ -6,3 +6,4 @@ export * from './theme.js';
 export * from './templates.js';
 export * from './table.js';
 export * from './patch.js';
+export { createGrid, gridDimensions, resizeGrid } from './grid.js';

@@ -20,6 +20,8 @@ import {
 } from 'lucide-react';
 import {
   effectiveStyle,
+  gridDimensions,
+  resizeGrid,
   registry,
   type UiNode,
   type NodeStyle,
@@ -194,6 +196,20 @@ export function StyleControls({
     parentRow = parent && effectiveStyle(parent, breakpoint).direction === 'row';
   const change: Change = (key, value) =>
     onUpdate((n) => {
+      if (
+        n.type === 'grid' &&
+        breakpoint === 'desktop' &&
+        typeof value === 'number' &&
+        (key === 'gridColumns' || key === 'gridRows')
+      ) {
+        const current = gridDimensions(n);
+        resizeGrid(
+          n,
+          key === 'gridColumns' ? value : current.columns,
+          key === 'gridRows' ? value : current.rows,
+        );
+        return;
+      }
       const target = breakpoint === 'desktop' ? n.style : (n.responsive[breakpoint] ??= {});
       if (value === undefined) delete target[key];
       else Object.assign(target, { [key]: value });
@@ -409,7 +425,11 @@ export function StyleControls({
         {node.type === 'grid' && (
           <div className="field-grid">
             {numeric('gridColumns', '그리드 열 수', 2, 12, 1)}
-            {numeric('gridRows', '그리드 행 수', 1, 50, 1)}
+            {numeric('gridRows', '그리드 행 수', gridDimensions(node).rows, 50, 1)}
+            <p className="panel-help">
+              기본 행·열 조절은 실제 영역을 추가하거나 줄입니다. 내용이 있는 영역은 먼저 비워
+              주세요. 모바일 열 설정은 배치만 바꿉니다.
+            </p>
           </div>
         )}
         {parent && !root && (

@@ -1,6 +1,13 @@
 import { useMemo, useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { createTemplate, createNode, pageTemplates, type Breakpoint } from '@jjapgma/ui-spec';
+import {
+  createTemplate,
+  createNode,
+  createGrid,
+  resizeGrid,
+  pageTemplates,
+  type Breakpoint,
+} from '@jjapgma/ui-spec';
 import { NodeRenderer } from './NodeRenderer';
 import { ContentFields } from './controls/ContentFields';
 function Gallery() {
@@ -90,3 +97,35 @@ const meta = {
 export default meta;
 export const GalleryStory: StoryObj = { name: 'Gallery', render: () => <Gallery /> };
 export const Charts: StoryObj = { render: () => <ChartEditor /> };
+function GridEditor() {
+  const [node, setNode] = useState(createGrid);
+  const [preview, setPreview] = useState(false);
+  return (
+    <main style={{ padding: 56 }}>
+      <label>
+        <input
+          type="checkbox"
+          checked={preview}
+          onChange={(event) => setPreview(event.target.checked)}
+        />
+        그리드 미리보기
+      </label>
+      <div style={{ marginTop: 56 }}>
+        <NodeRenderer
+          node={node}
+          selectedId={node.id}
+          breakpoint="desktop"
+          preview={preview}
+          onGridResize={(_id, columns, rows) =>
+            setNode((old) => {
+              const copy = structuredClone(old);
+              resizeGrid(copy, columns, rows);
+              return copy;
+            })
+          }
+        />
+      </div>
+    </main>
+  );
+}
+export const Grid: StoryObj = { render: () => <GridEditor /> };

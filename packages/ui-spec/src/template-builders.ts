@@ -14,6 +14,69 @@ import {
 function title(spec: UiSpec, name: string, description: string) {
   spec.root.children = [e('badge', 'WORKSPACE'), h(name, 36), muted(description)];
 }
+export function analytics(spec: UiSpec) {
+  title(spec, '서비스 분석', '방문 추이와 유입 경로, 주요 지표를 한눈에 확인하세요.');
+  const chart = (
+    name: string,
+    variant: UiNode['props']['chartVariant'],
+    labels: string[],
+    values: number[],
+    unit = '명',
+  ) =>
+    e(
+      'chart',
+      name,
+      {},
+      {
+        chartVariant: variant,
+        chartUnit: unit,
+        chartData: labels.map((label, index) => ({ label, value: values[index] })),
+      },
+    );
+  spec.root.children.push(
+    g(
+      'grid',
+      [
+        section('월간 방문자', [h('24,800', 34), muted('지난달 대비 +12.4%')]),
+        section('신규 가입', [h('1,420', 34), muted('지난달 대비 +8.1%')]),
+        section('전환율', [h('5.7%', 34), muted('지난달 대비 +0.6%p')]),
+      ],
+      { gridColumns: 3, padding: 0, gap: 24 },
+    ),
+    section('방문자 추이', [
+      chart(
+        '최근 7일 방문자',
+        'area',
+        ['월', '화', '수', '목', '금', '토', '일'],
+        [2100, 2800, 2400, 3500, 4200, 3900, 4800],
+      ),
+    ]),
+    g(
+      'grid',
+      [
+        section('많이 찾은 콘텐츠', [
+          chart(
+            '콘텐츠별 조회',
+            'horizontalBar',
+            ['시작 가이드', '템플릿', '업데이트', '활용 사례'],
+            [4200, 3100, 2400, 1600],
+            '회',
+          ),
+        ]),
+        section('유입 경로', [
+          chart(
+            '채널별 방문 비중',
+            'donut',
+            ['직접 방문', '검색', '소셜', '기타'],
+            [42, 32, 18, 8],
+            '%',
+          ),
+        ]),
+      ],
+      { gridColumns: 2, padding: 0, gap: 24 },
+    ),
+  );
+}
 function auth(spec: UiSpec, name: string, description: string, fields: UiNode[]) {
   spec.root.style = {
     direction: 'column',

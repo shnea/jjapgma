@@ -97,7 +97,7 @@ export type NodeStyle = z.infer<typeof styleSchema>;
 export const propsSchema = z
   .object({
     text: z.string().max(5000),
-    chartVariant: z.enum(['bar', 'line', 'donut']).optional(),
+    chartVariant: z.enum(['bar', 'line', 'donut', 'area', 'horizontalBar']).optional(),
     chartData: z
       .array(
         z.object({ label: z.string().max(80), value: z.number().min(0).max(1000000000) }).strict(),

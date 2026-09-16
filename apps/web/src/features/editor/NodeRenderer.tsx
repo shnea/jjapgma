@@ -9,6 +9,7 @@ import { useControlRowAlignment } from './useControlRowAlignment';
 import { SidePanel } from './SidePanel';
 import { Carousel } from './Carousel';
 import { Wizard } from './Wizard';
+import { GridControls } from './GridControls';
 
 const builderDragTypes = (types: DOMStringList | readonly string[]) =>
   Array.from(types).some((type) => type === 'application/jjapgma' || type === 'text/plain');
@@ -22,6 +23,7 @@ function RenderNode({
   onSelect,
   onDrop,
   onResize,
+  onGridResize,
   preview = false,
   root = false,
   ancestorLocked = false,
@@ -34,6 +36,7 @@ function RenderNode({
   onSelect?: (id: string) => void;
   onDrop?: (id: string, data: string, position?: 'before' | 'inside' | 'after') => void;
   onResize?: (id: string, width: number, height: number) => void;
+  onGridResize?: (id: string, columns: number, rows: number) => void;
   preview?: boolean;
   root?: boolean;
   ancestorLocked?: boolean;
@@ -200,6 +203,7 @@ function RenderNode({
           onSelect={onSelect}
           onDrop={onDrop}
           onResize={onResize}
+          onGridResize={onGridResize}
           preview={preview}
           root={false}
           ancestorLocked={locked}
@@ -359,6 +363,9 @@ function RenderNode({
           )}
           {node.name}
         </span>
+      )}
+      {node.type === 'grid' && selectedId === node.id && !preview && !locked && onGridResize && (
+        <GridControls node={node} onResize={onGridResize} />
       )}
       {container || preview ? (
         content

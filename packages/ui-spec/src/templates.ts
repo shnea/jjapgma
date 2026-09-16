@@ -17,6 +17,7 @@ import {
   success,
   failure,
   onboarding,
+  analytics,
 } from './template-builders.js';
 
 export const templateCategories = [
@@ -67,6 +68,14 @@ const templateDefinitions = [
     name: '목록 관리',
     category: '업무·관리',
     description: '검색·필터·행 선택·정렬·페이징을 갖춘 CRUD 목록',
+  },
+  {
+    id: 'analytics',
+    build: analytics,
+    themeIndex: 1,
+    name: '데이터 분석',
+    category: '업무·관리',
+    description: 'KPI·영역 추이·가로 막대 비교·유입 비중을 담은 차트/그래프 대시보드',
   },
   {
     id: 'form',
@@ -205,6 +214,7 @@ const templateOrder = [
   'onboarding',
   'main',
   'dashboard',
+  'analytics',
   'management',
   'detail',
   'form',
@@ -364,8 +374,17 @@ function main(spec: UiSpec) {
   });
   body.name = '메뉴와 본문';
   body.responsive.mobile = { direction: 'row' };
-  spec.root.style = { direction: 'column', padding: 0, gap: 0, minHeight: '100dvh', width: '100%' };
-  spec.root.responsive.mobile = { padding: 0, gap: 0 };
+  const edge = {
+    padding: 0,
+    paddingTop: 0,
+    paddingRight: 0,
+    paddingBottom: 0,
+    paddingLeft: 0,
+    gap: 0,
+  };
+  spec.root.style = { direction: 'column', ...edge, minHeight: '100dvh', width: '100%' };
+  spec.root.responsive.tablet = { ...edge };
+  spec.root.responsive.mobile = { ...edge };
   spec.root.children = [header, body];
 }
 function chat(spec: UiSpec) {
@@ -469,15 +488,24 @@ function management(spec: UiSpec) {
   ];
 }
 function form(spec: UiSpec) {
+  spec.root.style.width = '100%';
+  spec.root.style.align = 'stretch';
   spec.root.children = [
     heading('문의하기'),
     text('필요한 내용을 남겨 주세요.'),
     group(
       'card',
       [
-        input('이름'),
-        input('이메일', 'email'),
-        element('select', '문의 유형', {}, { items: '일반 문의\n도입 상담\n기술 지원' }),
+        group(
+          'grid',
+          [
+            input('이름'),
+            input('이메일', 'email'),
+            element('select', '문의 유형', {}, { items: '일반 문의\n도입 상담\n기술 지원' }),
+            input('제목'),
+          ],
+          { gridColumns: 2, padding: 0, gap: 24, width: '100%' },
+        ),
         element('textarea', '상세 내용'),
         element('checkbox', '개인정보 처리에 동의합니다'),
         button('문의 제출'),

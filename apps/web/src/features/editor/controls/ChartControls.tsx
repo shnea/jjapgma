@@ -1,4 +1,4 @@
-import { ChartColumn, ChartLine, ChartPie, Plus, Trash2 } from 'lucide-react';
+import { ChartColumn, ChartLine, ChartPie, ChartArea, ChartBar, Plus, Trash2 } from 'lucide-react';
 import type { UiNode } from '@jjapgma/ui-spec';
 import { ChoiceField } from './ChoiceField';
 export function ChartControls({
@@ -18,10 +18,12 @@ export function ChartControls({
           { value: 'bar', label: '막대', icon: <ChartColumn size={20} /> },
           { value: 'line', label: '꺾은선', icon: <ChartLine size={20} /> },
           { value: 'donut', label: '도넛', icon: <ChartPie size={20} /> },
+          { value: 'area', label: '영역', icon: <ChartArea size={20} /> },
+          { value: 'horizontalBar', label: '가로 막대', icon: <ChartBar size={20} /> },
         ]}
         onChange={(value) =>
           onUpdate((n) => {
-            n.props.chartVariant = value as 'bar' | 'line' | 'donut';
+            n.props.chartVariant = value as UiNode['props']['chartVariant'];
           })
         }
       />

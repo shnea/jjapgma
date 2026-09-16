@@ -27,7 +27,7 @@ OWNER/EDITOR만 업로드/첨부할 수 있고, 서버는 project_files에 연�
 
 ## 도구와 적용
 
-공식 템플릿은 기존 7개를 보존한 21개이며 [화면 목록](PAGE_LIBRARY.md)을 따릅니다. MCP는 같은 Registry에서 최신 목록과 생성기를 읽습니다. `chart`는 `chartVariant`(bar/line/donut), `chartData`(label/value, 최대 24개), `chartUnit`을 사용합니다. `wizard`의 자식 컨테이너/카드가 단계이며 자식 이름이 단계 제목입니다. 검색 유형 `input`의 `searchTargetId`로 테이블/메뉴에 연결할 수 있습니다. 이 요소를 쓸 때 필요한 types에 포함해 스키마를 조회하세요. 앱/API 갱신 외에 새 환경변수나 n8n 워크플로 변경은 필요하지 않습니다.
+공식 템플릿은 기존 7개 ID를 보존한 22개이며 [화면 목록](PAGE_LIBRARY.md)을 따릅니다. MCP는 같은 Registry에서 최신 목록과 생성기를 읽습니다. `chart`는 `chartVariant`(bar/line/donut/area/horizontalBar), `chartData`(label/value, 최대 24개), `chartUnit`을 사용합니다. `wizard`의 자식 컨테이너/카드가 단계이며 자식 이름이 단계 제목입니다. 검색 유형 `input`의 `searchTargetId`로 테이블/메뉴에 연결할 수 있습니다. 이 요소를 쓸 때 필요한 types에 포함해 스키마를 조회하세요. 앱/API 갱신 외에 새 환경변수나 n8n 워크플로 변경은 필요하지 않습니다. 칸별 그리드는 grid 아래 container들을 추가하고 각 칸에 테두리와 최소 높이를 지정합니다. 별도의 비표준 셀 타입은 없습니다.
 
 조회: `get_design_context`, `get_project`, `get_current_selection`, `get_pages`, `get_page_spec`, `get_component_registry`, `get_component_schema`, `get_templates`, `get_template`, `get_theme`, `get_actions`, `get_revision`, `get_proposals`.
 

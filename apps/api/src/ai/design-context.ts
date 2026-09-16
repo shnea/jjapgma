@@ -72,7 +72,8 @@ export function componentSchema(type: ComponentType) {
 
 export const operationGuide = {
   rules: [
-    'navbar.menuItems는 최대 3단계입니다. 메인 화면은 루트 minHeight=100dvh, 모바일 메뉴 버튼은 헤더의 일반 button.overlayAction으로 sidePanel에 연결하고 mobileTrigger=external을 사용합니다. carouselVariant는 controls/arrows/regions이며 크기는 carouselSizing과 carouselRatio/carouselHeight로 지정합니다. chart는 chartData=[{label,value}], chartVariant=bar/line/donut을 사용합니다. wizard는 직계 자식 컨테이너 하나가 한 단계이며 자식 name이 단계 이름입니다. input(controlType=search)의 searchTargetId로 table을 검색할 수 있습니다.',
+    'navbar.menuItems는 최대 3단계입니다. 메인 화면은 루트 minHeight=100dvh, 모바일 메뉴 버튼은 헤더의 일반 button.overlayAction으로 sidePanel에 연결하고 mobileTrigger=external을 사용합니다. carouselVariant는 controls/arrows/regions이며 크기는 carouselSizing과 carouselRatio/carouselHeight로 지정합니다. chart는 chartData=[{label,value}], chartVariant=bar/line/donut/area/horizontalBar을 사용합니다. wizard는 직계 자식 컨테이너 하나가 한 단계이며 자식 name이 단계 이름입니다. input(controlType=search)의 searchTargetId로 table을 검색할 수 있습니다.',
+    '칸별 요소를 넣을 그리드는 grid 아래 container를 하나씩 추가하고 각 container에 borderWidth:1,borderColor:theme:border,minHeight:120px를 지정합니다. gridColumns/gridRows로 기본 배치를 지정하고 모바일은 gridColumns:1로 바꿀 수 있습니다. 셀 안에 실제 요소를 추가하세요.',
     'operations는 HTML/CSS가 아닌 아래 작업 형식입니다. op=create와 componentType은 없습니다. 추가는 op=add, type, id, parentId가 필수입니다.',
     '새 페이지의 page-root는 이미 존재합니다. 루트를 만들지 말고 update하세요. 부모를 먼저 add하고 자식의 parentId로 연결하세요. 기본 노드의 예시 UUID는 실제 페이지 요소 ID가 아닙니다.',
     'style.padding은 0~160 정수입니다. 네 방향은 paddingTop/Right/Bottom/Left 정수로 지정하세요. flex/flexGrow는 지원하지 않습니다. 조회한 style의 허용 속성만 사용하세요.',

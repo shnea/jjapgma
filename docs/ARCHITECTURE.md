@@ -45,7 +45,8 @@ React 웹 + NestJS 모듈형 단일 API + PostgreSQL. 기능을 파일·모듈�
 - 공유 연결 트랜잭션에서 user_notifications를 함께 생성합니다. 사용자/초대별 중복을 막고, 조회 시 현재 멤버십과 초대 수락 상태를 검사합니다. notify 지침은 외부 발송 계약이므로 앱 내부 알림함과 읽음 상태는 앱 DB에서 관리합니다.
 - 페이지 삭제는 OWNER/EDITOR와 baseRevision을 확인한 후 deleted_at으로 숨기고 버전 기록을 보관합니다. 복원은 행 잠금 후 선택 버전을 새 revision으로 복사합니다. 프로젝트 자체 삭제는 OWNER만 가능합니다. [복원·템플릿·테마](PAGE_LIBRARY.md).
 - 템플릿 목록/생성기와 선택적 theme 스키마는 공통 ui-spec 패키지에 있습니다. 서버가 등록된 템플릿 ID를 검증하여 새 명세를 생성하고, NodeRenderer가 명시적 요소 스타일보다 낮은 우선순위로 테마를 적용합니다. HTML ZIP도 같은 테마 CSS와 렌더러를 사용합니다.
-- 공식 템플릿은 5개 그룹·21개이며 기존 ID를 보존합니다. 공통 조립 함수는 template-parts, 추가 화면 생성기는 template-builders로 분리합니다. chart/wizard는 독립 Registry 요소로 등록해 Inspector·MCP·저장·HTML ZIP에 같은 명세를 사용합니다. wizard의 입력과 단계 상태는 브라우저 미리보기 상태이며 업무 데이터 저장을 대신하지 않습니다.
+- 공식 템플릿은 5개 그룹·22개이며 기존 ID를 보존합니다. 공통 조립 함수는 template-parts, 추가 화면 생성기는 template-builders로 분리합니다. chart/wizard는 독립 Registry 요소로 등록해 Inspector·MCP·저장·HTML ZIP에 같은 명세를 사용합니다. wizard의 입력과 단계 상태는 브라우저 미리보기 상태이며 업무 데이터 저장을 대신하지 않습니다.
+- 팔레트 그리드 생성/캔버스 행·열 변경은 공통 grid.ts의 createGrid/resizeGrid를 사용합니다. 셀은 기존 container이며 별도 저장 타입이 없습니다. 슬롯을 행/열 좌표로 보존하고 비어 있지 않거나 잠긴 셀의 제거를 거절합니다. 전체 변경은 editSpec 검증과 편집기 history를 통과합니다. MCP는 기존 grid+container 추가 명세로 같은 구조를 구성합니다.
 - 편집 패널의 공식 템플릿도 공통 Registry를 사용합니다. 개인 템플릿은 사용자 소유 명세 스냅샷과 template_files 메타데이터로 저장하고 원본 프로젝트 수명과 분리합니다. 서버는 생성 시 원본 편집 권한·파일 연결을, 재사용 시 소유권·대상 편집 권한을 검사합니다. 파일 본문/미리보기는 기존 file-service 계약을 유지합니다.
 - 저장은 행 잠금 → ACL → baseRevision 비교 → 명세/Revision/Audit 업데이트를 한 트랜잭션으로 처리합니다.
 - 수정 중 자동 저장 응답은 이후 편집을 덮어쓰지 않습니다. Undo/Redo는 최대 100개 편집 상태를 보유하며 저장 Revision과 분리됩니다.

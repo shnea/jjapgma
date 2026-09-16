@@ -15,7 +15,7 @@
 | **탐색 (Navigation)** | `navbar`(내비게이션 바), `searchBox`(메뉴 검색), `tabs`(탭), `breadcrumb`(경로 표시), `pagination`(페이지 번호), `stepper`(단계 표시) | navbar는 기존 items 및 아이콘·하위 메뉴 구조를 지원. searchBox는 대상 메뉴 ID에 연결. 예전 header/sidebar 별칭은 유지하며 새 접이식 패널은 sidePanel을 사용 |
 | **데이터 (Data)** | `table`(테이블), `list`(목록), `descriptionList`(설명 목록), `badge`(배지), `avatar`(아바타), `accordion`(아코디언) | `keyValue`를 `descriptionList`로 통합. `chip`을 `badge`의 `shape`(기본 라운드 / 알약형 Pill) 속성으로 통합 |
 | **피드백 (Feedback)** | `alert`(알림), `progress`(진행률), `spinner`(로딩 표시), `skeleton`(스켈레톤), `emptyState`(상태 화면) | `errorState`를 `emptyState`의 `stateType`(빈 상태 / 오류 / 완료) 속성으로 통합 |
-| **차트 (Data)** | `chart` | 막대·꺾은선·도넛을 한 요소의 변형으로 통합. 항목/값/단위 편집, 최대 24개 비음수 데이터, 테마/빈 데이터/텍스트 값 목록 지원 |
+| **차트·그래프 (Data)** | `chart` | 세로 막대·가로 막대·꺾은선·영역·도넛을 한 요소의 변형으로 통합. 항목/값/단위 편집, 최대 24개 비음수 데이터, 테마/빈 데이터/텍스트 값 목록 지원 |
 | **고급 (Advanced)** | `jsonViewer`(JSON 보기) | 읽기 전용 JSON 뷰어 |
 
 ---
