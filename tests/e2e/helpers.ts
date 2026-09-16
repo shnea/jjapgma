@@ -2,8 +2,12 @@ import { expect, type Page } from '@playwright/test';
 import type { UiSpec } from '@jjapgma/ui-spec';
 export async function openSpec(page: Page, spec: UiSpec, name: string) {
   await page.goto('/');
+  const login = page.waitForResponse('/api/auth/dev');
   await page.getByRole('button', { name: '개발용 워크스페이스 열기' }).click();
-  const identity = await (await page.request.get('/api/auth/me')).json();
+  expect((await login).ok()).toBe(true);
+  const identityResponse = await page.request.get('/api/auth/me');
+  expect(identityResponse.ok()).toBe(true);
+  const identity = await identityResponse.json();
   const headers = { Origin: process.env.BASE_URL!, 'X-CSRF-Token': identity.csrfToken };
   const project = await (
     await page.request.post('/api/projects', { headers, data: { name } })

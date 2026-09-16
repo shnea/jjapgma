@@ -1,0 +1,179 @@
+{
+  "name": "짭그마 AI 사용량 수집",
+  "active": false,
+  "nodes": [
+    {
+      "id": "schedule",
+      "name": "매분 수집",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "executions",
+      "name": "완료된 실행 조회",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        0
+      ],
+      "parameters": {
+        "url": "https://YOUR_N8N_DOMAIN/api/v1/executions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "workflowId",
+              "value": "YOUR_AI_WORKFLOW_ID"
+            },
+            {
+              "name": "includeData",
+              "value": "true"
+            },
+            {
+              "name": "limit",
+              "value": "100"
+            },
+            {
+              "name": "startedAfter",
+              "value": "={{ $now.minus({ days: 1 }).toISO() }}"
+            }
+          ]
+        },
+        "options": {
+          "pagination": {
+            "pagination": {
+              "parameters": {
+                "parameters": [
+                  {
+                    "type": "qs",
+                    "name": "cursor",
+                    "value": "={{ $response.body.nextCursor }}"
+                  }
+                ]
+              },
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ !$response.body.nextCursor }}",
+              "limitPagesFetched": true,
+              "maxRequests": 20,
+              "requestInterval": 250
+            }
+          },
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      }
+    },
+    {
+      "id": "collect",
+      "name": "모델 사용량 추출",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// n8n Code node — Run Once for All Items. 실제 사용량만 수집합니다.\nconst APP_ORIGIN = 'https://jjapgma.shnea.kr';\nconst reports = [];\nconst skipped = {};\nconst skip = (reason) => {\n  skipped[reason] = (skipped[reason] ?? 0) + 1;\n};\nconst inputs = $input.all();\nif (inputs.at(-1)?.json.nextCursor)\n  throw new Error('조회 페이지 제한에 도달했습니다. 최대 페이지 수를 늘려 주세요.');\nfor (const item of inputs) {\n  const executions = Array.isArray(item.json.data) ? item.json.data : [item.json];\n  for (const execution of executions) {\n    if (!['success', 'error', 'canceled', 'crashed'].includes(execution.status)) continue;\n    const age = Date.now() - Date.parse(execution.startedAt);\n    if (!Number.isFinite(age) || age < 0 || age > 6 * 86400000) continue;\n    const runs = execution.data?.resultData?.runData;\n    if (!runs || !Object.keys(runs).length) {\n      skip('실행 상세 없음: includeData와 실행 저장 설정 확인');\n      continue;\n    }\n    if (!Array.isArray(execution.workflowData?.nodes)) {\n      skip('워크플로 노드 정보 없음');\n      continue;\n    }\n    const webhook = execution.workflowData.nodes.find((n) => n.type === 'n8n-nodes-base.webhook');\n    const body = webhook && runs[webhook.name]?.[0]?.data?.main?.[0]?.[0]?.json?.body;\n    if (!body || !/^[0-9a-f-]{36}$/i.test(body.requestId ?? '')) {\n      skip('짭그마 요청 정보 없음: 앱에서 새 대화 요청 필요');\n      continue;\n    }\n    const url = APP_ORIGIN + '/api/ai/usage/' + body.requestId;\n    if (body.usageReport?.url !== url || typeof body.usageReport?.token !== 'string') {\n      skip('사용량 보고 정보 누락 또는 앱 주소 불일치');\n      continue;\n    }\n    const calls = [];\n    let missing = false;\n    let modelRuns = 0;\n    for (const node of execution.workflowData.nodes) {\n      if (!/\\.lmChat/.test(node.type)) continue;\n      for (const [runIndex, run] of (runs[node.name] ?? []).entries()) {\n        modelRuns++;\n        const outputs = run.data?.ai_languageModel ?? run.data?.main;\n        const entries = Array.isArray(outputs) ? outputs.flat().filter(Boolean) : [];\n        if (!entries.length || run.error) missing = true;\n        for (const [itemIndex, entry] of entries.entries()) {\n          const json = entry.json ?? {};\n          const response = json.response ?? json;\n          // tokenUsageEstimate는 추정값이므로 합산하지 않습니다.\n          // n8n N8nLlmTracing stores tokenUsage beside response, not inside it.\n          const usage =\n            json.tokenUsage ??\n            response.tokenUsage ??\n            response.llmOutput?.tokenUsage ??\n            json.usage_metadata ??\n            response.usage_metadata;\n          const input = usage?.promptTokens ?? usage?.input_tokens ?? usage?.prompt_tokens;\n          const output =\n            usage?.completionTokens ?? usage?.output_tokens ?? usage?.completion_tokens;\n          const total = usage?.totalTokens ?? usage?.total_tokens ?? input + output;\n          if (\n            ![input, output, total].every(\n              (n) => Number.isSafeInteger(n) && n >= 0 && n <= 1000000000,\n            ) ||\n            total < input + output\n          ) {\n            missing = true;\n            continue;\n          }\n          const metadata = response.generations?.[0]?.[0];\n          const model =\n            response.model ??\n            response.model_name ??\n            metadata?.generationInfo?.model_name ??\n            metadata?.message?.response_metadata?.model_name;\n          calls.push({\n            id: execution.id + ':' + node.id + ':' + runIndex + ':' + itemIndex,\n            ...(typeof model === 'string' ? { model: model.slice(0, 160) } : {}),\n            inputTokens: input,\n            outputTokens: output,\n            totalTokens: total,\n          });\n        }\n      }\n    }\n    if (!modelRuns || !calls.length) {\n      skip(\n        !modelRuns\n          ? 'Chat Model 실행 기록 없음'\n          : '실제 토큰 정보 없음: tokenUsageEstimate는 추정치라 제외',\n      );\n      continue;\n    }\n    if (calls.length > 200)\n      throw new Error('모델 호출이 200개를 넘었습니다. 수집 범위를 확인하세요.');\n    reports.push({\n      json: { url, token: body.usageReport.token, usage: { complete: !missing, calls } },\n    });\n  }\n}\nif (!reports.length && Object.keys(skipped).length) {\n  throw new Error(\n    '사용량을 추출하지 못했습니다. ' +\n      Object.entries(skipped)\n        .map(([reason, count]) => `${reason} (${count}건)`)\n        .join(' / '),\n  );\n}\nreturn reports;\n"
+      }
+    },
+    {
+      "id": "report",
+      "name": "짭그마에 사용량 기록",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $json.token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.usage }}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 150
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "매분 수집": {
+      "main": [
+        [
+          {
+            "node": "완료된 실행 조회",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "완료된 실행 조회": {
+      "main": [
+        [
+          {
+            "node": "모델 사용량 추출",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "모델 사용량 추출": {
+      "main": [
+        [
+          {
+            "node": "짭그마에 사용량 기록",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "all"
+  },
+  "pinData": {},
+  "tags": []
+}

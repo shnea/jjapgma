@@ -20,64 +20,6 @@ export function DataElement({ node }: { node: UiNode }) {
   const items = (node.props.items ?? '').split('\n').filter(Boolean);
 
   switch (node.type as string) {
-    case 'table': {
-      const showHeader = node.props.showHeader !== false;
-      const [header = '', ...sourceRows] = items;
-      const columns =
-        node.props.columnCount ?? Math.max(1, ...items.map((row) => row.split('|').length));
-      const cells = (row: string) =>
-        Array.from({ length: columns }, (_, i) => row.split('|')[i] ?? '');
-      // Dimensions crop the view without deleting authored cell content.
-      const rows = Array.from(
-        { length: node.props.rowCount ?? sourceRows.length },
-        (_, i) => sourceRows[i] ?? '',
-      );
-      const pageSize =
-        node.props.paginationMode === 'pagination' ? (node.props.pageSize ?? 3) : rows.length || 1;
-      const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
-      const currentPage = Math.min(page, totalPages);
-      const displayedRows =
-        node.props.paginationMode === 'pagination'
-          ? rows.slice((currentPage - 1) * pageSize, currentPage * pageSize)
-          : rows;
-
-      return (
-        <div className="element-table-wrapper">
-          <div className="element-table-scroll">
-            <table>
-              {node.props.text && <caption>{node.props.text}</caption>}
-              {showHeader && (
-                <thead>
-                  <tr>
-                    {cells(header).map((cell, i) => (
-                      <th scope="col" key={i}>
-                        {cell}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-              )}
-              <tbody>
-                {displayedRows.map((row, i) => (
-                  <tr key={i}>
-                    {cells(row).map((cell, j) => (
-                      <td key={j}>{cell}</td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <PaginationControl
-            mode={node.props.paginationMode}
-            design={node.props.paginationDesign}
-            page={currentPage}
-            total={totalPages}
-            onPageChange={setPage}
-          />
-        </div>
-      );
-    }
     case 'list': {
       const showHeader = Boolean(node.props.showHeader);
       const [header = '', ...bodyItems] = showHeader ? items : ['', ...items];

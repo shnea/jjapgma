@@ -171,7 +171,8 @@ export function DatePickerControl({
       <button
         ref={trigger}
         type="button"
-        className="picker-trigger"
+        className="picker-trigger field-control"
+        data-field-control
         aria-label={label}
         aria-haspopup="dialog"
         aria-expanded={open && !disabled}
@@ -185,7 +186,7 @@ export function DatePickerControl({
           setOpen(!open);
         }}
       >
-        <span>{text(selection)}</span>
+        <span title={text(selection)}>{text(selection)}</span>
         <Calendar size={18} />
       </button>
       {labelPosition === 'right' && labelSpan}

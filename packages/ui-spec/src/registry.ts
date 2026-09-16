@@ -50,6 +50,7 @@ export const legacyTypeAliases: Record<
 };
 
 export const propertySchema = [
+  { key: 'wizardCompletionText', label: '단계 완료 안내', editor: 'text', types: ['wizard'] },
   {
     key: 'includeTime',
     label: '시간 사용',
@@ -123,16 +124,20 @@ export const propertySchema = [
       'badge',
       'avatar',
       'jsonViewer',
+      'chat',
+      'chart',
+      'wizard',
       'table',
       'modal',
       'dialog',
+      'nonModal',
     ],
   },
   {
     key: 'placeholder',
     label: '입력 안내',
     editor: 'text',
-    types: ['input', 'textarea'],
+    types: ['input', 'textarea', 'chat'],
   },
   {
     key: 'controlType',

@@ -39,6 +39,8 @@ docker compose ps
 
 마이그레이션은 advisory lock으로 직렬화되고 파일 checksum을 검사합니다. 수정된 기존 마이그레이션은 거부하고 새 SQL 파일로 변경합니다. 마이그레이션 실패 시 이후 명령을 실행하지 않습니다. 앱과 Nginx를 함께 재생성하여 변경된 API 컨테이너 주소를 반영합니다. 이 초기 배포는 짧은 중단이 있을 수 있으며 무중단 배포를 보장하지 않습니다.
 
+AI 사용 중에는 이미지를 먼저 준비하고 교체 직전에 진행 중 요청을 확인합니다. API는 SIGTERM/SIGINT를 받으면 새 AI 요청 접수를 막고 자기 프로세스가 처리하던 실행을 '서버 재시작' 실패로 기록한 뒤 연결과 DB를 닫습니다. n8n 작업을 자동 재실행하거나 외부 워크플로를 취소하지는 않습니다. 강제 종료·정전은 최대 실행 만료 후 조회에서 정리되므로 정상 종료 시간을 확보합니다. 재시작 후 사용자가 새 요청을 보내면 됩니다. 도구 지연은 mcp_tool_finished의 tool/outcome/elapsedMs와 n8n Executions를 비교합니다.
+
 정상 확인: 외부 https://jjapgma.shnea.kr/api/health, OIDC 로그인 → 프로젝트/페이지 저장 → 새로고침. API 내부 liveness는 /api/health/live이며 readiness와 구분합니다. 컨테이너 unhealthy만으로 자동 복구가 보장되지는 않습니다.
 
 ## 롤백

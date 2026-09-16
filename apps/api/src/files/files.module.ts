@@ -98,6 +98,19 @@ class FilesController {
   ) {
     return this.client.preview(await this.reference(projectId, fileId, request.identity.id));
   }
+  @Get('templates/:templateId/files/:fileId/preview') async templatePreview(
+    @Req() request: AuthRequest,
+    @Param('templateId') templateId: string,
+    @Param('fileId') fileId: string,
+  ) {
+    const id = parse(fileIdSchema, fileId);
+    const result = await this.db.pool.query(
+      'SELECT f.file_id FROM template_files f JOIN personal_templates t ON t.id=f.template_id WHERE t.id=$1 AND t.user_id=$2 AND f.file_id=$3',
+      [parse(uuid, templateId), request.identity.id, id],
+    );
+    if (!result.rowCount) throw new NotFoundException('첨부파일을 찾을 수 없습니다.');
+    return this.client.preview(id);
+  }
   @Get('projects/:projectId/files/:fileId/download') async download(
     @Req() request: AuthRequest,
     @Param('projectId') projectId: string,

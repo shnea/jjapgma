@@ -1,0 +1,64 @@
+.element-chart {
+  margin: 0;
+  width: 100%;
+  min-width: 0;
+  color: var(--page-text, #243020);
+}
+.element-chart figcaption {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+.chart-plot {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.chart-grid {
+  stroke: var(--page-border, #d9e2d1);
+  stroke-dasharray: 4 4;
+}
+.chart-caption {
+  fill: var(--page-muted, #61705a);
+  font-size: 12px;
+}
+.chart-total {
+  fill: var(--page-text, #243020);
+  font-size: 20px;
+  font-weight: 700;
+}
+.chart-donut {
+  display: flex;
+  justify-content: center;
+}
+.chart-donut svg {
+  width: min(100%, 260px);
+}
+.chart-values {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+  gap: 12px;
+  margin: 16px 0 0;
+}
+.chart-values div {
+  min-width: 0;
+  padding: 8px;
+  border-top: 2px solid var(--page-border, #d9e2d1);
+}
+.chart-values dt {
+  color: var(--page-muted, #61705a);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.chart-values dd {
+  margin: 6px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.chart-empty {
+  padding: 36px 12px;
+  text-align: center;
+  color: var(--page-muted, #61705a);
+}

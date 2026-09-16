@@ -1,0 +1,154 @@
+.render-node.render-button .element-button {
+  border-radius: var(--button-radius, var(--node-radius, 6px));
+  background: var(--button-background, var(--node-background, #28312a));
+  color: var(--button-color, var(--node-color, #ffffff));
+  border-width: var(--button-border-width, 0px);
+  border-style: solid;
+  border-color: var(--button-border-color, currentColor);
+}
+.render-node.render-button .element-button:is(.variant-outline, .variant-ghost) {
+  background: var(--button-background, transparent);
+  color: var(--button-color, var(--node-color, #28312a));
+}
+.render-node.render-button .element-button.variant-outline {
+  border-width: var(--button-border-width, 1px);
+}
+.render-heading > :is(h1, h2, h3, h4, h5, h6),
+.render-heading > .render-content > :is(h1, h2, h3, h4, h5, h6) {
+  font-size: inherit;
+  font-weight: var(--element-font-weight, 700);
+  line-height: var(--element-line-height, 1.3);
+}
+.render-text > p,
+.render-text > .render-content > p,
+.render-label > p,
+.render-label > .render-content > p {
+  line-height: var(--element-line-height, 1.7);
+}
+.render-button.render-size-fixed .element-button {
+  width: 100%;
+}
+.render-button[data-self-stretch='true'] > .element-button,
+.render-button[data-self-stretch='true'] > .render-content > .element-button {
+  width: 100%;
+}
+.render-button .button-text {
+  line-height: inherit;
+}
+.render-image img {
+  object-fit: var(--element-object-fit, cover);
+  object-position: var(--element-object-position, center);
+}
+.element-field-group {
+  width: 100%;
+  min-width: 0;
+}
+.element-field-group .element-field-label {
+  margin: 0;
+}
+.element-field-group .field-description,
+.element-field-group .field-error {
+  margin: 5px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.element-field-group .field-description {
+  color: var(--page-muted, #59675e);
+}
+.element-field-group .field-error {
+  color: #b42318;
+}
+.element-field-group .has-error :is(input, textarea, select, .element-input-adornment) {
+  border-color: #b42318;
+}
+.render-node .element-input-adornment {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  width: 100%;
+  padding: 0 10px;
+  border: 1px solid var(--page-border, #d7dfd2);
+  border-radius: var(--node-radius, 6px);
+  background: var(--node-background, #fff);
+}
+.render-node .element-input-adornment input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  padding-left: 0;
+  padding-right: 0;
+}
+.element-input-adornment > span {
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--page-muted, #59675e);
+}
+.render-node .element-input-adornment > button {
+  padding: 3px;
+  background: transparent;
+  color: var(--page-text, #253129);
+  font-size: 18px;
+}
+
+/* One control box for text, calendar and range fields; labels/help stay outside it. */
+.render-node[data-control-row-item] {
+  align-self: flex-start;
+  margin-top: var(--control-row-offset, 0px);
+}
+.render-node .field-control {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  height: max(44px, calc(1.375em + 22px));
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--page-border, #c8d1c2);
+  border-radius: var(--node-radius, 6px);
+  background: var(--node-background, #fff);
+  color: var(--node-color, #344054);
+  font-size: inherit;
+  font-family: inherit;
+  font-weight: inherit;
+  line-height: 1.375;
+}
+.render-node .field-control:focus-visible {
+  outline: 2px solid var(--page-primary, #52763b);
+  outline-offset: 2px;
+}
+.render-node .picker-trigger {
+  flex: 0 1 auto;
+}
+.element-label-left > .picker-trigger,
+.element-label-right > .picker-trigger {
+  flex: 1;
+}
+.picker-trigger span {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.render-node .element-field-label {
+  font-size: 14px;
+  line-height: 1.4;
+}
+.render-node .element-input-adornment.field-control {
+  padding: 0 12px;
+}
+.render-node .element-input-adornment > input.field-control {
+  border: 0;
+  border-radius: 0;
+  min-height: 0;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+}
+.render-node .field-control:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

@@ -1,14 +1,21 @@
-import { useState, type CSSProperties, type DragEvent } from 'react';
+import { useContext, useState, type CSSProperties, type DragEvent } from 'react';
+import { OverlayContext, OverlayProvider, ScopedOverlay, OverlayChrome } from './ScopedOverlay';
 import { GripVertical } from 'lucide-react';
 import { effectiveStyle, registry, type Breakpoint, type UiNode } from '@jjapgma/ui-spec';
 import { ElementContent } from './elements/ElementContent';
+import type { PageTheme } from '@jjapgma/ui-spec';
+import { themeStyle, resolveColor } from './themeStyle';
+import { useControlRowAlignment } from './useControlRowAlignment';
+import { SidePanel } from './SidePanel';
+import { Carousel } from './Carousel';
+import { Wizard } from './Wizard';
 
 const builderDragTypes = (types: DOMStringList | readonly string[]) =>
   Array.from(types).some((type) => type === 'application/jjapgma' || type === 'text/plain');
 const builderDragData = (dataTransfer: DataTransfer) =>
   dataTransfer.getData('application/jjapgma') || dataTransfer.getData('text/plain');
 
-export function NodeRenderer({
+function RenderNode({
   node,
   breakpoint,
   selectedId,
@@ -19,6 +26,7 @@ export function NodeRenderer({
   root = false,
   ancestorLocked = false,
   horizontal = false,
+  theme,
 }: {
   node: UiNode;
   breakpoint: Breakpoint;
@@ -30,33 +38,20 @@ export function NodeRenderer({
   root?: boolean;
   ancestorLocked?: boolean;
   horizontal?: boolean;
+  theme?: PageTheme;
 }) {
   const [dropPosition, setDropPosition] = useState<'before' | 'inside' | 'after' | undefined>();
-  const [modalOpen, setModalOpen] = useState(true);
-  const [modalOffset, setModalOffset] = useState({ x: 0, y: 0 });
   const container = Boolean(registry[node.type].children);
   const value = effectiveStyle(node, breakpoint);
   const locked = ancestorLocked || node.locked;
-
-  const handleHeaderMouseDown = (e: React.MouseEvent) => {
-    if (!preview) return;
-    e.preventDefault();
-    e.stopPropagation();
-    const startX = e.clientX - modalOffset.x;
-    const startY = e.clientY - modalOffset.y;
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      setModalOffset({
-        x: moveEvent.clientX - startX,
-        y: moveEvent.clientY - startY,
-      });
-    };
-    const handleMouseUp = () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-  };
+  const controlRow = useControlRowAlignment(
+    container &&
+      node.type !== 'grid' &&
+      value.direction === 'row' &&
+      value.controlAlignment !== 'layout',
+    node,
+    breakpoint,
+  );
 
   function position(event: DragEvent<HTMLDivElement>): 'before' | 'inside' | 'after' {
     if (root) return 'inside';
@@ -80,19 +75,71 @@ export function NodeRenderer({
     return custom as CSSProperties;
   }
   const style: CSSProperties = {
-    width: value.width,
-    height: value.height,
+    width:
+      value.alignSelf === 'stretch' && (!value.width || value.width === 'auto')
+        ? 'auto'
+        : value.width,
+    height:
+      value.height === '100dvh' || value.height === '100vh'
+        ? 'var(--page-viewport-height, 100dvh)'
+        : value.height,
+    minWidth: value.minWidth,
+    maxWidth: value.maxWidth,
+    minHeight:
+      value.minHeight === '100dvh' ||
+      value.minHeight === '100vh' ||
+      (root && value.minHeight === undefined)
+        ? 'var(--page-viewport-height, 100dvh)'
+        : value.minHeight,
+    maxHeight: value.maxHeight,
+    flexGrow: value.grow ? 1 : undefined,
+    flexBasis: value.grow ? 0 : undefined,
+    flexShrink: value.shrink === false ? 0 : undefined,
+    position: value.sticky ? 'sticky' : undefined,
+    top: value.sticky ? 0 : undefined,
+    zIndex: value.sticky ? 5 : undefined,
     padding: value.padding,
     gap: value.gap,
     borderRadius: value.radius,
     fontSize: value.fontSize,
-    background: value.background,
-    color: value.color,
+    fontWeight: value.fontWeight,
+    lineHeight: value.lineHeight,
+    alignSelf: value.alignSelf === 'auto' ? undefined : value.alignSelf,
+    justifySelf: value.justifySelf,
+    flexWrap: value.wrap ? 'wrap' : undefined,
+    paddingTop: value.paddingTop,
+    paddingRight: value.paddingRight,
+    paddingBottom: value.paddingBottom,
+    paddingLeft: value.paddingLeft,
+    marginTop: value.pushEnd && !horizontal ? 'auto' : value.marginTop,
+    marginRight: value.marginRight,
+    marginBottom: value.marginBottom,
+    marginLeft: value.pushEnd && horizontal ? 'auto' : value.marginLeft,
+    borderTopLeftRadius: value.radiusTopLeft,
+    borderTopRightRadius: value.radiusTopRight,
+    borderBottomLeftRadius: value.radiusBottomLeft,
+    borderBottomRightRadius: value.radiusBottomRight,
+    borderWidth: value.borderWidth,
+    borderStyle: value.borderWidth ? 'solid' : undefined,
+    borderColor: resolveColor(value.borderColor),
+    boxShadow: value.shadow
+      ? {
+          none: 'none',
+          small: '0 2px 6px #00000014',
+          medium: '0 6px 18px #00000020',
+          large: '0 12px 32px #00000028',
+        }[value.shadow]
+      : undefined,
+    opacity: value.opacity,
+    background: resolveColor(value.background),
+    color: resolveColor(value.color),
     flexDirection: value.direction,
     alignItems: value.align,
     justifyContent: value.justify,
     textAlign: value.textAlign,
     overflow: value.overflow,
+    overflowX: value.overflowX,
+    overflowY: value.overflowY,
     ...(container ? { display: 'flex' } : {}),
     ...(node.type === 'grid'
       ? {
@@ -104,18 +151,42 @@ export function NodeRenderer({
         }
       : {}),
     ...(value.hidden ? { ...(preview ? { display: 'none' } : {}), opacity: 0.3 } : {}),
+    ...({
+      '--element-font-size': value.fontSize ? `${value.fontSize}px` : undefined,
+      '--element-font-weight': value.fontWeight,
+      '--element-line-height': value.lineHeight,
+      '--element-object-fit': value.objectFit ?? 'cover',
+      '--element-object-position': value.objectPosition ?? 'center',
+      ...(node.type === 'button'
+        ? {
+            '--button-height': value.height && value.height !== 'auto' ? value.height : undefined,
+            '--button-font-size': `${value.fontSize ?? 14}px`,
+            '--button-font-weight': value.fontWeight,
+            '--button-line-height': value.lineHeight ?? 1,
+            '--button-gap': `${node.props.iconGap ?? 8}px`,
+            '--button-padding': `${value.paddingTop ?? value.padding ?? 0}px ${value.paddingRight ?? value.padding ?? 16}px ${value.paddingBottom ?? value.padding ?? 0}px ${value.paddingLeft ?? value.padding ?? 16}px`,
+            '--button-radius': `${value.radiusTopLeft ?? value.radius ?? theme?.radius ?? 6}px ${value.radiusTopRight ?? value.radius ?? theme?.radius ?? 6}px ${value.radiusBottomRight ?? value.radius ?? theme?.radius ?? 6}px ${value.radiusBottomLeft ?? value.radius ?? theme?.radius ?? 6}px`,
+            '--button-background': resolveColor(value.background),
+            '--button-color': resolveColor(value.color),
+            '--button-border-width':
+              value.borderWidth === undefined ? undefined : `${value.borderWidth}px`,
+            '--button-border-color': resolveColor(value.borderColor),
+            padding: 0,
+            paddingTop: 0,
+            paddingRight: 0,
+            paddingBottom: 0,
+            paddingLeft: 0,
+            background: 'transparent',
+            borderWidth: 0,
+          }
+        : {}),
+    } as CSSProperties),
     ...parseCustomCss(node.props.customCss),
   };
-
-  if ((node.type === 'modal' || node.type === 'dialog') && preview && !modalOpen) {
-    return (
-      <div className="render-modal-reopen-wrap" style={{ padding: '12px 0' }}>
-        <button type="button" className="dialog-btn primary" onClick={() => setModalOpen(true)}>
-          {node.props.text || '모달/다이얼로그'} 다시 열기
-        </button>
-      </div>
-    );
-  }
+  const themedStyle = {
+    ...themeStyle(theme, node, value, root),
+    ...Object.fromEntries(Object.entries(style).filter(([, value]) => value !== undefined)),
+  };
 
   const innerContent = container ? (
     node.children.length ? (
@@ -123,6 +194,7 @@ export function NodeRenderer({
         <NodeRenderer
           key={child.id}
           node={child}
+          theme={theme}
           breakpoint={breakpoint}
           selectedId={selectedId}
           onSelect={onSelect}
@@ -138,89 +210,55 @@ export function NodeRenderer({
       <span className="drop-hint">요소를 여기로 끌어오세요</span>
     ) : null
   ) : (
-    <ElementContent node={node} />
+    <ElementContent node={node} breakpoint={breakpoint} />
   );
 
-  const modalTransformStyle: CSSProperties =
-    preview && (modalOffset.x || modalOffset.y)
-      ? { transform: `translate(${modalOffset.x}px, ${modalOffset.y}px)` }
-      : {};
-
+  const overlay = ['modal', 'dialog', 'nonModal', 'drawer'].includes(node.type);
   const content =
-    node.type === 'modal' ? (
-      <div className="render-modal-inner" style={modalTransformStyle}>
-        <div
-          className="modal-header-bar"
-          onMouseDown={handleHeaderMouseDown}
-          style={{ cursor: preview ? 'grab' : 'default' }}
-          title={preview ? '드래그하여 이동' : undefined}
-        >
-          <strong>{node.props.text || '모달 대화상자'}</strong>
-          <button
-            type="button"
-            className="modal-close-btn"
-            aria-label="닫기"
-            onClick={(e) => {
-              e.stopPropagation();
-              setModalOpen(false);
-            }}
-          >
-            ×
-          </button>
-        </div>
-        <div className="modal-content-area">{innerContent}</div>
-      </div>
-    ) : node.type === 'dialog' ? (
-      <div className="render-dialog-inner" style={modalTransformStyle}>
-        <div
-          className="dialog-header-bar"
-          onMouseDown={handleHeaderMouseDown}
-          style={{ cursor: preview ? 'grab' : 'default' }}
-          title={preview ? '드래그하여 이동' : undefined}
-        >
-          <strong>{node.props.text || '다이얼로그'}</strong>
-          <button
-            type="button"
-            className="modal-close-btn"
-            aria-label="닫기"
-            onClick={(e) => {
-              e.stopPropagation();
-              setModalOpen(false);
-            }}
-          >
-            ×
-          </button>
-        </div>
-        <div className="dialog-content-area">{innerContent}</div>
-        <div className="dialog-footer-bar">
-          <button
-            type="button"
-            className="dialog-btn secondary"
-            onClick={(e) => {
-              e.stopPropagation();
-              setModalOpen(false);
-            }}
-          >
-            취소
-          </button>
-          <button
-            type="button"
-            className="dialog-btn primary"
-            onClick={(e) => {
-              e.stopPropagation();
-              setModalOpen(false);
-            }}
-          >
-            확인
-          </button>
-        </div>
-      </div>
+    node.type === 'wizard' ? (
+      <Wizard key={node.id} node={node} preview={preview} selectedId={selectedId}>
+        {innerContent}
+      </Wizard>
+    ) : node.type === 'carousel' ? (
+      <Carousel node={node} preview={preview} selectedId={selectedId}>
+        {innerContent}
+      </Carousel>
+    ) : overlay && node.type !== 'drawer' ? (
+      <OverlayChrome
+        node={node}
+        breakpoint={breakpoint}
+        preview={preview}
+        contentStyle={{
+          display: 'flex',
+          flexDirection: value.direction ?? 'column',
+          gap: themedStyle.gap,
+          padding: themedStyle.padding,
+          paddingTop: value.paddingTop,
+          paddingRight: value.paddingRight,
+          paddingBottom: value.paddingBottom,
+          paddingLeft: value.paddingLeft,
+          flexWrap: value.wrap ? 'wrap' : undefined,
+          alignItems: value.align,
+          justifyContent: value.justify,
+        }}
+      >
+        {innerContent}
+      </OverlayChrome>
     ) : (
       innerContent
     );
-  return (
+  const rendered = (
     <div
+      ref={controlRow}
       data-node-id={node.id}
+      data-collapse-visibility={node.props.collapseVisibility}
+      data-page-root={root ? 'true' : undefined}
+      data-carousel-fixed-height={
+        node.type === 'carousel' && value.height && value.height !== 'auto' ? 'true' : undefined
+      }
+      data-self-stretch={value.alignSelf === 'stretch' ? 'true' : undefined}
+      data-overflow-x={value.overflowX ?? value.overflow}
+      data-page-theme={(root || overlay) && theme ? 'true' : undefined}
       data-testid={`node-${node.type}`}
       data-drop-position={dropPosition}
       data-drop-axis={horizontal ? 'horizontal' : 'vertical'}
@@ -236,7 +274,37 @@ export function NodeRenderer({
       }}
       onDragEnd={() => setDropPosition(undefined)}
       className={`render-node render-${node.type} ${value.width === undefined || value.width === 'auto' ? 'render-size-auto' : 'render-size-fixed'} ${preview ? 'preview-mode' : ''} ${selectedId === node.id && !preview ? 'node-selected' : ''}`}
-      style={style}
+      style={
+        node.type === 'drawer'
+          ? { ...themedStyle, width: '100%', flexShrink: 0 }
+          : overlay
+            ? {
+                ...themedStyle,
+                padding: 0,
+                paddingTop: 0,
+                paddingRight: 0,
+                paddingBottom: 0,
+                paddingLeft: 0,
+                gap: 0,
+                flexDirection: 'column',
+                alignItems: 'stretch',
+                justifyContent: 'flex-start',
+                maxWidth: '100%',
+                maxHeight: '100%',
+                margin: 0,
+                flexShrink: 1,
+                overflow: 'hidden',
+              }
+            : node.type === 'sidePanel'
+              ? {
+                  ...themedStyle,
+                  width: '100%',
+                  height: '100%',
+                  minHeight: 0,
+                  boxSizing: 'border-box',
+                }
+              : themedStyle
+      }
       onClick={
         preview
           ? undefined
@@ -294,7 +362,11 @@ export function NodeRenderer({
       ) : (
         <div
           className="render-content"
-          style={{ pointerEvents: preview ? 'auto' : 'none', width: '100%' }}
+          style={{
+            pointerEvents: preview ? 'auto' : 'none',
+            width: '100%',
+            ...(node.type === 'chat' ? { height: '100%' } : {}),
+          }}
         >
           {content}
         </div>
@@ -326,5 +398,28 @@ export function NodeRenderer({
         />
       )}
     </div>
+  );
+
+  return node.type === 'sidePanel' ? (
+    <SidePanel node={node} breakpoint={breakpoint} preview={preview}>
+      {rendered}
+    </SidePanel>
+  ) : overlay ? (
+    <ScopedOverlay node={node} preview={preview} hidden={!!value.hidden}>
+      {rendered}
+    </ScopedOverlay>
+  ) : (
+    rendered
+  );
+}
+
+export function NodeRenderer(props: Parameters<typeof RenderNode>[0]) {
+  const runtime = useContext(OverlayContext);
+  return runtime ? (
+    <RenderNode {...props} />
+  ) : (
+    <OverlayProvider>
+      <RenderNode {...props} />
+    </OverlayProvider>
   );
 }

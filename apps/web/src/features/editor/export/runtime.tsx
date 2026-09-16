@@ -8,6 +8,10 @@ import '../../../styles/renderer.css';
 import '../../../styles/elements.css';
 import '../../../styles/picker.css';
 import '../../../styles/pagination.css';
+import '../../../styles/page-theme.css';
+import '../../../styles/table.css';
+import '../../../styles/element-customization.css';
+import '../../../styles/main-layout.css';
 
 const payload = JSON.parse(document.getElementById('jjapgma-spec')!.textContent!);
 const spec = validateSpec(payload.spec);
@@ -23,7 +27,7 @@ function ExportedPage() {
   }, []);
   return (
     <ExportAssetsContext.Provider value={assets}>
-      <NodeRenderer node={spec.root} breakpoint={device} root preview />
+      <NodeRenderer node={spec.root} theme={spec.theme} breakpoint={device} root preview />
     </ExportAssetsContext.Provider>
   );
 }

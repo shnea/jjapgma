@@ -19,6 +19,7 @@ export const contentComponents = {
 
   // 탐색 (Navigation)
   navbar: item('내비게이션 바', '탐색', '메인 메뉴', 'panel-top'),
+  searchBox: item('메뉴 검색', '탐색', '메뉴 검색', 'search'),
   tabs: item('탭', '탐색', '탭 콘텐츠', 'folder-kanban'),
   breadcrumb: item('경로 표시', '탐색', '현재 위치', 'chevron-right'),
   pagination: item('페이지 번호', '탐색', '페이지', 'hash'),
@@ -26,11 +27,13 @@ export const contentComponents = {
 
   // 데이터 (Data)
   table: item('테이블', '데이터', '목록', 'table'),
+  chart: item('차트', '데이터', '월별 현황', 'chart-column'),
   list: item('목록', '데이터', '목록', 'list'),
   descriptionList: item('설명 목록', '데이터', '상세 정보', 'file-text'),
   badge: item('배지', '데이터', '새 소식', 'tag'),
   avatar: item('아바타', '데이터', '사용자', 'user'),
   accordion: item('아코디언', '데이터', '내용을 여기에 입력하세요.', 'chevrons-up-down'),
+  chat: item('채팅', '데이터', '디자인 대화', 'message-square'),
 
   // 피드백 (Feedback)
   alert: item('알림', '피드백', '변경 사항이 저장되었습니다.', 'alert-circle'),
@@ -40,5 +43,10 @@ export const contentComponents = {
   emptyState: item('상태 화면', '피드백', '아직 항목이 없습니다.', 'inbox'),
 
   // 고급 (Advanced)
-  jsonViewer: item('JSON 보기', '고급', '{\n  "title": "새 프로젝트",\n  "enabled": true\n}', 'code-2'),
+  jsonViewer: item(
+    'JSON 보기',
+    '고급',
+    '{\n  "title": "새 프로젝트",\n  "enabled": true\n}',
+    'code-2',
+  ),
 } as const;

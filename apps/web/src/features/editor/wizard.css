@@ -1,0 +1,89 @@
+.element-wizard {
+  width: 100%;
+  min-width: 0;
+  color: var(--page-text, #243020);
+}
+.wizard-steps {
+  display: flex;
+  gap: 12px;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px;
+  overflow-x: auto;
+}
+.wizard-steps li {
+  flex: 1;
+  min-width: 110px;
+}
+.element-wizard button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 1px solid var(--page-border, #d9e2d1);
+  border-radius: var(--page-radius, 8px);
+  color: inherit;
+  background: var(--page-surface, #fff);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.wizard-steps button {
+  width: 100%;
+  border: 0;
+  border-bottom: 2px solid var(--page-border, #d9e2d1);
+  border-radius: 0;
+  padding: 12px 4px;
+  background: transparent;
+}
+.wizard-steps button[aria-current] {
+  color: var(--page-primary, #466e2c);
+  border-color: currentColor;
+  font-weight: 600;
+}
+.wizard-steps button span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+}
+.element-wizard button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.element-wizard button:focus-visible {
+  outline: 2px solid var(--page-primary, #466e2c);
+  outline-offset: 3px;
+}
+.element-wizard button:not(:disabled):hover {
+  filter: brightness(0.95);
+}
+.wizard-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+}
+.wizard-actions > span {
+  font-size: 13px;
+  color: var(--page-muted, #61705a);
+}
+.element-wizard .wizard-next {
+  background: var(--page-primary, #466e2c);
+  color: var(--page-on-primary, #fff);
+  border-color: transparent;
+}
+.wizard-complete {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 40px 20px;
+  border: 1px solid var(--page-border, #d9e2d1);
+  border-radius: var(--page-radius, 8px);
+}

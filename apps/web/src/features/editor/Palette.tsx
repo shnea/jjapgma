@@ -37,6 +37,11 @@ import {
   Box,
   Inbox,
   Code2,
+  MessageSquare,
+  PanelLeft,
+  PanelRight,
+  GalleryHorizontal,
+  ChartColumn,
 } from 'lucide-react';
 import { componentTypes, registry, type ComponentType } from '@jjapgma/ui-spec';
 
@@ -47,6 +52,12 @@ const icons: Record<ComponentType, typeof Square> = {
   card: PanelTop,
   modal: PanelTop,
   dialog: PanelTop,
+  nonModal: PanelTop,
+  sidePanel: PanelLeft,
+  drawer: PanelRight,
+  carousel: GalleryHorizontal,
+  wizard: ListOrdered,
+  searchBox: Search,
   // 기본
   heading: Heading,
   text: Type,
@@ -78,6 +89,8 @@ const icons: Record<ComponentType, typeof Square> = {
   badge: Tag,
   avatar: User,
   accordion: ChevronsUpDown,
+  chat: MessageSquare,
+  chart: ChartColumn,
   // 피드백
   alert: AlertCircle,
   progress: Loader2,

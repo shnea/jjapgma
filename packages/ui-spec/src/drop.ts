@@ -19,7 +19,8 @@ export function dropElement(
   let index =
     effectivePosition === 'inside'
       ? parent.children.length
-      : parent.children.findIndex((n) => n.id === targetId) + (effectivePosition === 'after' ? 1 : 0);
+      : parent.children.findIndex((n) => n.id === targetId) +
+        (effectivePosition === 'after' ? 1 : 0);
   if (typeof value.id === 'string') {
     const oldIndex = parent.children.findIndex((n) => n.id === value.id);
     if (oldIndex >= 0 && oldIndex < index) index--;
@@ -27,7 +28,7 @@ export function dropElement(
   }
   if (!value.type || !Object.hasOwn(registry, value.type))
     throw new Error('지원하지 않는 요소입니다.');
-  const node = createNode(value.type);
+  const node = createNode(value.type, Boolean(spec.theme));
   const next = insertNode(spec, parent.id, node);
   return moveNode(next, node.id, parent.id, index);
 }

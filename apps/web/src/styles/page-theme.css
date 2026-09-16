@@ -1,0 +1,56 @@
+.render-node[data-page-theme]
+  :is(input, select, textarea, button, label, p, a, h1, h2, h3, h4, h5, h6, th, td, legend) {
+  font-family: var(--page-font);
+}
+.render-node[data-page-theme] .element-button {
+  background: var(--node-background);
+  color: var(--node-color);
+  border-radius: var(--node-radius);
+}
+.render-node[data-page-theme] .element-button:is(.variant-outline, .variant-ghost) {
+  color: var(--node-color);
+}
+.render-node[data-page-theme] :is(input, select, textarea) {
+  background-color: var(--node-background);
+  color: var(--node-color);
+  border-color: var(--page-border);
+  border-radius: var(--node-radius);
+  accent-color: var(--page-primary);
+}
+.render-node[data-page-theme]
+  :is(.element-field-label, .element-options legend, .element-options label) {
+  color: var(--node-color);
+}
+.render-node[data-page-theme] .render-node a {
+  color: var(--node-link);
+}
+.render-node[data-page-theme]
+  :is(th, .element-badge, .modal-header-bar, .dialog-header-bar, .dialog-footer-bar) {
+  background: var(--page-surface);
+  color: var(--node-color);
+}
+.render-node[data-page-theme] :is(td, th, .render-card, hr) {
+  border-color: var(--page-border);
+}
+.render-node[data-page-theme] .element-pagination button {
+  background: var(--page-surface);
+  color: var(--page-text);
+  border-color: var(--page-border);
+  border-radius: var(--page-radius);
+}
+.render-node[data-page-theme] .element-pagination button.active {
+  background: var(--page-primary);
+  color: var(--page-on-primary);
+}
+.render-node[data-page-theme] .progress-label {
+  color: var(--page-muted);
+}
+.render-node[data-page-theme] progress {
+  accent-color: var(--page-primary);
+}
+.render-node[data-page-theme] .progress-ring-indicator {
+  stroke: var(--page-primary);
+}
+.render-node[data-page-theme] .element-switch-track input:checked {
+  background: var(--page-primary);
+}

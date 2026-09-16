@@ -1,52 +1,16 @@
 import { useContext, useState, type ElementType } from 'react';
 import { ExportAssetsContext } from '../export/ExportAssets';
-import {
-  Plus,
-  Image,
-  Star,
-  Heart,
-  Search,
-  Settings,
-  Check,
-  X,
-  AlertCircle,
-  Inbox,
-  CheckCircle2,
-  Info,
-  ArrowLeft,
-  ArrowRight,
-  ArrowUp,
-  ArrowDown,
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react';
+import { Image, AlertCircle, Inbox, CheckCircle2, Info } from 'lucide-react';
 import type { UiNode } from '@jjapgma/ui-spec';
 import { FileImage } from '../files/FileAssets';
+import { ElementIcon } from '../controls/IconPicker';
+import { useOverlayAction } from '../ScopedOverlay';
 
 export function BasicElement({ node }: { node: UiNode }) {
   const exportedAssets = useContext(ExportAssetsContext);
+  const overlayAction = useOverlayAction();
   const [pressed, setPressed] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
-
-  const Icon = ({ size = 20 }: { size?: number }) => {
-    const icons: Record<string, ElementType> = {
-      plus: Plus,
-      star: Star,
-      heart: Heart,
-      search: Search,
-      settings: Settings,
-      check: Check,
-      x: X,
-      'arrow-left': ArrowLeft,
-      'arrow-right': ArrowRight,
-      'arrow-up': ArrowUp,
-      'arrow-down': ArrowDown,
-      'chevron-left': ChevronLeft,
-      'chevron-right': ChevronRight,
-    };
-    const Component = icons[node.props.iconName as string] ?? Star;
-    return <Component size={size} />;
-  };
 
   switch (node.type as string) {
     case 'heading': {
@@ -59,9 +23,21 @@ export function BasicElement({ node }: { node: UiNode }) {
     case 'link':
       return <a href={node.props.href || '#'}>{node.props.text}</a>;
     case 'icon':
+      if (node.props.overlayAction)
+        return (
+          <button
+            type="button"
+            className="modal-close-btn"
+            aria-label={node.props.text}
+            disabled={node.props.disabled}
+            onClick={() => overlayAction(node.props.overlayAction!)}
+          >
+            <ElementIcon name={node.props.iconName || 'star'} size={28} />
+          </button>
+        );
       return (
         <span role="img" aria-label={node.props.text} className="element-standalone-icon">
-          <Icon size={28} />
+          <ElementIcon name={node.props.iconName || 'star'} size={28} />
         </span>
       );
     case 'image':
@@ -103,12 +79,18 @@ export function BasicElement({ node }: { node: UiNode }) {
           type="button"
           className={`element-button variant-${variant} ${isFab ? 'element-fab' : ''} ${isIconOnly ? 'element-icon-button' : ''}`}
           disabled={node.props.disabled}
-          aria-pressed={pressed}
-          onClick={() => setPressed((v) => !v)}
+          aria-pressed={node.props.overlayAction ? undefined : pressed}
+          aria-label={isIconOnly ? node.props.text || '버튼' : undefined}
+          style={{ flexDirection: node.props.iconPosition === 'end' ? 'row-reverse' : undefined }}
+          onClick={() =>
+            node.props.overlayAction
+              ? overlayAction(node.props.overlayAction)
+              : setPressed((v) => !v)
+          }
         >
           {node.props.iconName && node.props.iconName !== 'none' && (
             <span className="button-icon-wrapper">
-              <Icon size={isFab ? 24 : 16} />
+              <ElementIcon name={node.props.iconName || 'star'} size={isFab ? 24 : 16} />
             </span>
           )}
           {!isIconOnly && <span className="button-text">{node.props.text}</span>}

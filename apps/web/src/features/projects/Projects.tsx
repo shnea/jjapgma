@@ -1,8 +1,22 @@
 import { useEffect, useState } from 'react';
-import { ArrowUpRight, LayoutGrid, Plus, Search, FolderOpen, LogOut, Layers3, Trash2 } from 'lucide-react';
+import {
+  ArrowUpRight,
+  LayoutGrid,
+  Plus,
+  Search,
+  FolderOpen,
+  LogOut,
+  Layers3,
+  Trash2,
+  Share2,
+} from 'lucide-react';
 import { api, errorMessage, type Project, type User } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { Brand } from '../../components/ui/Brand';
+import { SharingDialog } from '../sharing/SharingDialog';
+import { ProjectSelect } from './ProjectSwitcher';
+import { NotificationBell } from '../notifications/NotificationBell';
+import { AccountLink } from '../account/AccountPage';
 export function Projects({ user, logout }: { user: User; logout: () => void }) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -11,17 +25,31 @@ export function Projects({ user, logout }: { user: User; logout: () => void }) {
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
-  function load() {
+  const [sharing, setSharing] = useState<Project>();
+  function load(showLoading = true) {
     setError('');
-    setLoading(true);
+    if (showLoading) setLoading(true);
     api<Project[]>('/projects')
       .then(setProjects)
       .catch((e) => setError(errorMessage(e)))
       .finally(() => setLoading(false));
   }
   useEffect(load, []);
+  useEffect(() => {
+    const refresh = () => load(false);
+    window.addEventListener('project-access-changed', refresh);
+    window.addEventListener('focus', refresh);
+    return () => {
+      window.removeEventListener('project-access-changed', refresh);
+      window.removeEventListener('focus', refresh);
+    };
+  }, []);
   async function deleteProject(id: string, projectName: string) {
-    if (!window.confirm(`'${projectName}' 프로젝트를 삭제하시겠습니까? 소속된 모든 페이지와 파일이 삭제됩니다.`)) {
+    if (
+      !window.confirm(
+        `'${projectName}' 프로젝트를 삭제하시겠습니까? 소속된 모든 페이지와 파일이 삭제됩니다.`,
+      )
+    ) {
       return;
     }
     try {
@@ -56,7 +84,14 @@ export function Projects({ user, logout }: { user: User; logout: () => void }) {
         <div className="workspace-switch">
           <span className="avatar">{user.displayName.slice(0, 1)}</span>
           <div>
-            <strong>나의 워크스페이스</strong>
+            <ProjectSelect
+              projects={projects}
+              value=""
+              disabled={loading}
+              onChange={(id) => {
+                if (id) window.location.assign(`/projects/${id}`);
+              }}
+            />
             <small>{user.displayName}</small>
           </div>
         </div>
@@ -86,10 +121,14 @@ export function Projects({ user, logout }: { user: User; logout: () => void }) {
           <span>
             워크스페이스 <span className="muted">/</span> 프로젝트
           </span>
-          <span className="profile-chip">
-            <span className="online-dot" />
-            {user.displayName}
-          </span>
+          <div className="workspace-account">
+            <NotificationBell />
+            <AccountLink user={user} />
+            <span className="profile-chip">
+              <span className="online-dot" />
+              {user.displayName}
+            </span>
+          </div>
         </header>
         <section className="project-section">
           <div className="section-title">
@@ -139,7 +178,7 @@ export function Projects({ user, logout }: { user: User; logout: () => void }) {
           {error && (
             <div className="error-banner" role="alert">
               {error}
-              <Button variant="ghost" onClick={load}>
+              <Button variant="ghost" onClick={() => load()}>
                 다시 시도
               </Button>
             </div>
@@ -151,59 +190,77 @@ export function Projects({ user, logout }: { user: User; logout: () => void }) {
           ) : (
             <div className="project-grid">
               {visible.map((project, index) => (
-                <a className="project-card" key={project.id} href={`/projects/${project.id}`}>
-                  <div className={`project-thumbnail tone-${index % 3}`} aria-hidden="true">
-                    <div className="mini-window">
-                      <div className="mini-toolbar">
-                        <i />
-                        <i />
-                        <i />
-                      </div>
-                      <div className="mini-body">
-                        <div className="mini-nav" />
-                        <div className="mini-content">
+                <article className="project-card" key={project.id}>
+                  <a
+                    className="project-card-link"
+                    href={`/projects/${project.id}`}
+                    aria-label={project.name}
+                  >
+                    <div className={`project-thumbnail tone-${index % 3}`} aria-hidden="true">
+                      <div className="mini-window">
+                        <div className="mini-toolbar">
                           <i />
-                          <span />
-                          <div>
-                            <b />
-                            <b />
-                            <b />
+                          <i />
+                          <i />
+                        </div>
+                        <div className="mini-body">
+                          <div className="mini-nav" />
+                          <div className="mini-content">
+                            <i />
+                            <span />
+                            <div>
+                              <b />
+                              <b />
+                              <b />
+                            </div>
                           </div>
                         </div>
                       </div>
+                      <span className="open-project">
+                        <ArrowUpRight size={18} />
+                      </span>
                     </div>
-                    <span className="open-project">
-                      <ArrowUpRight size={18} />
-                    </span>
-                  </div>
+                  </a>
                   <div className="project-card-info">
                     <div className="project-card-header-row">
                       <h2>{project.name}</h2>
                       {project.role === 'OWNER' && (
-                        <button
-                          type="button"
-                          className="delete-project-btn"
-                          aria-label={`${project.name} 삭제`}
-                          title="프로젝트 삭제"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            void deleteProject(project.id, project.name);
-                          }}
-                        >
-                          <Trash2 size={15} />
-                        </button>
+                        <div className="project-card-actions">
+                          <button
+                            type="button"
+                            className="share-project-btn"
+                            aria-label={`${project.name} 공유`}
+                            title="프로젝트 공유"
+                            onClick={() => setSharing(project)}
+                          >
+                            <Share2 size={15} />
+                          </button>
+                          <button
+                            type="button"
+                            className="delete-project-btn"
+                            aria-label={`${project.name} 삭제`}
+                            title="프로젝트 삭제"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              void deleteProject(project.id, project.name);
+                            }}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
                       )}
                     </div>
                     <div>
                       <span>
                         {project.pageCount}개 페이지 ·{' '}
                         {project.role === 'VIEWER' ? '보기 전용' : '편집 가능'}
+                        {project.role !== 'OWNER' && ' · 공유받음'}
                       </span>
                       <time>{new Date(project.updated_at).toLocaleDateString('ko-KR')}</time>
                     </div>
                   </div>
-                </a>
+                </article>
               ))}
               {!query && (
                 <button className="new-project-card" onClick={() => setCreating(true)}>
@@ -228,6 +285,13 @@ export function Projects({ user, logout }: { user: User; logout: () => void }) {
           </div>
         </section>
       </main>
+      {sharing && (
+        <SharingDialog
+          projectId={sharing.id}
+          projectName={sharing.name}
+          onClose={() => setSharing(undefined)}
+        />
+      )}
     </div>
   );
 }

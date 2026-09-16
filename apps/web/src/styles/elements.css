@@ -606,13 +606,14 @@
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 8px !important;
-  min-height: 38px !important;
-  height: 38px !important;
+  gap: var(--button-gap, 8px) !important;
+  min-height: 38px;
+  height: var(--button-height, auto);
   box-sizing: border-box !important;
-  font-size: 14px !important;
-  line-height: 1 !important;
-  padding: 0 16px !important;
+  font-size: var(--button-font-size, 14px) !important;
+  font-weight: var(--button-font-weight, inherit);
+  line-height: var(--button-line-height, 1) !important;
+  padding: var(--button-padding, 0 16px) !important;
 }
 .button-icon-wrapper {
   display: inline-flex;
@@ -938,12 +939,69 @@
   font-weight: 600;
   color: #101828;
 }
-.modal-close-btn {
+.modal-close-btn,
+.render-node .modal-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  min-width: 32px;
+  min-height: 32px;
   font-size: 20px;
   line-height: 1;
   color: #667085;
   cursor: pointer;
   padding: 0 4px;
+}
+.modal-close-btn:hover {
+  background: #66708512;
+}
+.modal-close-btn:focus-visible {
+  outline: 2px solid #466e2c;
+  outline-offset: 2px;
+}
+.scoped-overlay {
+  position: fixed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+  background: #10182840;
+  overflow: hidden;
+}
+.scoped-overlay.overlay-editing {
+  background: transparent;
+  pointer-events: none;
+}
+.scoped-overlay.overlay-nonblocking {
+  background: transparent;
+  pointer-events: none;
+}
+.scoped-overlay-surface {
+  display: flex;
+  flex-direction: column;
+  max-width: 100%;
+  max-height: 100%;
+  min-height: 0;
+  pointer-events: auto;
+  zoom: var(--overlay-zoom, 1);
+}
+.scoped-overlay-surface > .render-node {
+  box-shadow: 0 16px 36px #00000029;
+  background: #fff;
+}
+.scoped-overlay-content {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  flex: 1 1 auto;
+}
+.scoped-overlay .modal-header-bar,
+.scoped-overlay .dialog-footer-bar {
+  flex-shrink: 0;
 }
 .modal-content-area,
 .dialog-content-area {

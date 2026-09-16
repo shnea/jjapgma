@@ -8,6 +8,10 @@
 .render-node[draggable='true'] {
   cursor: grab;
 }
+.render-node:is([data-overflow-x='auto'], [data-overflow-x='scroll'])
+  > .render-node.render-size-fixed {
+  max-width: none;
+}
 .render-node[draggable='true']:active {
   cursor: grabbing;
 }
@@ -164,7 +168,6 @@
   width: 100%;
 }
 .render-button.render-size-auto {
-  align-self: flex-start;
   width: max-content;
   max-width: 100%;
 }

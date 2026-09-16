@@ -25,8 +25,20 @@ services:
     build: { context: ., target: api }
     environment:
       NODE_ENV: development
-      APP_URL: http://localhost:30137
-      DEV_AUTH_BYPASS: 'true'
+      APP_URL: ${APP_URL:-http://localhost:30137}
+      DEV_AUTH_BYPASS: ${DEV_AUTH_BYPASS:-true}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-jjapgma-web}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
+      OIDC_SCOPE: ${OIDC_SCOPE:-openid profile basic offline_access}
+      REFRESH_TOKEN_ENCRYPTION_KEY: ${REFRESH_TOKEN_ENCRYPTION_KEY:-}
+      SHARE_APPROVAL_MODE: ${SHARE_APPROVAL_MODE:-auto}
+      VERIFY_EMAIL_TTL_SECONDS: ${VERIFY_EMAIL_TTL_SECONDS:-86400}
+      NOTIFY_API_URL: ${NOTIFY_API_URL:-https://notify.shnea.kr/v1/notifications}
+      NOTIFY_API_TOKEN: ${NOTIFY_API_TOKEN:-}
+      AI_ENABLED: ${AI_ENABLED:-false}
+      AI_WEBHOOK_URL: ${AI_WEBHOOK_URL:-https://n8n.shnea.kr/webhook/jjapgma}
+      AI_WEBHOOK_TOKEN: ${AI_WEBHOOK_TOKEN:-}
+      AI_MCP_TOKEN: ${AI_MCP_TOKEN:-}
       FILE_SERVICE_BASE_URL: ${FILE_SERVICE_BASE_URL:-https://file.shnea.kr}
       FILE_SERVICE_BEARER_TOKEN: ${FILE_SERVICE_BEARER_TOKEN:-}
       UPLOAD_MAX_BYTES: ${UPLOAD_MAX_BYTES:-10485760}
@@ -46,7 +58,7 @@ services:
   nginx:
     image: jjapgma-nginx:dev
     build: { context: ., target: nginx }
-    ports: ['127.0.0.1:30137:8080']
+    ports: ['${NGINX_BIND_ADDRESS:-127.0.0.1}:${NGINX_HTTP_PORT:-30137}:8080']
     depends_on: { api: { condition: service_healthy } }
     healthcheck:
       test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:8080/api/health']

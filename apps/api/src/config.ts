@@ -11,11 +11,42 @@ const envSchema = z.object({
   FILE_SERVICE_BASE_URL: z.url().default('https://file.shnea.kr'),
   FILE_SERVICE_BEARER_TOKEN: z.string().default(''),
   UPLOAD_MAX_BYTES: z.coerce.number().int().min(1).max(10485760).default(10485760),
+  SHARE_APPROVAL_MODE: z.enum(['auto', 'email']).default('auto'),
+  VERIFY_EMAIL_TTL_SECONDS: z.coerce.number().int().min(60).max(604800).default(86400),
+  NOTIFY_API_URL: z.url().default('https://notify.shnea.kr/v1/notifications'),
+  NOTIFY_API_TOKEN: z.string().default(''),
+  AI_ENABLED: z.enum(['true', 'false']).default('false'),
+  AI_WEBHOOK_URL: z.url().default('https://n8n.shnea.kr/webhook/jjapgma'),
+  AI_WEBHOOK_TOKEN: z.string().default(''),
+  AI_MCP_TOKEN: z.string().default(''),
 });
 export function readConfig(env: NodeJS.ProcessEnv = process.env) {
   const c = envSchema.parse(env);
+  if (c.NODE_ENV !== 'test' && c.AI_WEBHOOK_URL !== 'https://n8n.shnea.kr/webhook/jjapgma')
+    throw new Error('AI_WEBHOOK_URL must use the jjapgma production webhook.');
+  if (c.AI_ENABLED === 'true' && c.AI_WEBHOOK_TOKEN.length < 32)
+    throw new Error('AI requires a webhook authentication token of at least 32 characters.');
+  if (c.AI_ENABLED === 'true' && c.AI_MCP_TOKEN.length < 32)
+    throw new Error('AI requires an MCP service token of at least 32 characters.');
+  if (c.AI_ENABLED === 'true' && c.AI_MCP_TOKEN === c.AI_WEBHOOK_TOKEN)
+    throw new Error('Webhook and MCP tokens must be different.');
   const url = new URL(c.APP_URL);
   const fileUrl = new URL(c.FILE_SERVICE_BASE_URL);
+  const notifyUrl = new URL(c.NOTIFY_API_URL);
+  if (
+    notifyUrl.username ||
+    notifyUrl.password ||
+    notifyUrl.search ||
+    notifyUrl.hash ||
+    !['http:', 'https:'].includes(notifyUrl.protocol) ||
+    (c.NODE_ENV !== 'test' && notifyUrl.protocol !== 'https:')
+  )
+    throw new Error('NOTIFY_API_URL must be a secure notification endpoint.');
+  if (
+    c.SHARE_APPROVAL_MODE === 'email' &&
+    (!c.NOTIFY_API_TOKEN || !/^[0-9a-f]{64}$/i.test(c.REFRESH_TOKEN_ENCRYPTION_KEY))
+  )
+    throw new Error('Email sharing requires NOTIFY_API_TOKEN and a 32-byte hex encryption key.');
   if (
     fileUrl.username ||
     fileUrl.password ||

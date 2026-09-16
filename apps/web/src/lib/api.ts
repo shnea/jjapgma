@@ -28,7 +28,13 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
 }
 export const errorMessage = (error: unknown) =>
   error instanceof Error ? error.message : '문제가 발생했습니다. 다시 시도해 주세요.';
-export type User = { id: string; displayName: string; csrfToken: string };
+export type User = {
+  id: string;
+  displayName: string;
+  nickname?: string | null;
+  email?: string | null;
+  csrfToken: string;
+};
 export type Project = {
   id: string;
   name: string;

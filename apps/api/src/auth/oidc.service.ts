@@ -2,6 +2,8 @@ import { Injectable, UnauthorizedException, ServiceUnavailableException } from '
 import { createRemoteJWKSet } from 'jose';
 import { verifyIdToken } from './id-token.js';
 import { config } from '../config.js';
+import { identityEmail } from './email.js';
+import type { JWTPayload } from 'jose';
 export type Tokens = {
   id_token?: string;
   refresh_token?: string;
@@ -42,6 +44,22 @@ export class OidcService {
       return await verifyIdToken(token, this.keys, config.issuer, config.OIDC_CLIENT_ID, nonce);
     } catch {
       throw new UnauthorizedException('인증 정보를 확인할 수 없습니다.');
+    }
+  }
+  async email(tokens: Tokens, claims: JWTPayload) {
+    if (claims.email !== undefined)
+      return identityEmail({ email: claims.email, email_verified: claims.email_verified });
+    try {
+      const response = await fetch(`${config.issuer}/userinfo`, {
+        headers: { Authorization: `Bearer ${tokens.access_token}` },
+        signal: AbortSignal.timeout(8000),
+        redirect: 'error',
+      });
+      if (!response.ok) return null;
+      const info = await response.json();
+      return info?.sub === claims.sub ? identityEmail(info) : null;
+    } catch {
+      return null;
     }
   }
   async revoke(refreshToken: string) {

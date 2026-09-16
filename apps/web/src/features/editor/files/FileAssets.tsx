@@ -6,6 +6,7 @@ import { ExportAssetsContext } from '../export/ExportAssets';
 type Attachment = NonNullable<UiNode['props']['attachment']>;
 type Assets = {
   projectId: string;
+  templateId?: string;
   onAttach: (nodeId: string, file: Attachment) => void;
   canUpload: (nodeId: string) => boolean;
 };
@@ -87,18 +88,20 @@ export function FileUploadControl({ node }: { node: UiNode }) {
         </small>
       )}
       {error && <p role="alert">{error}</p>}
-      {node.props.attachment && (assets || exportedAssets?.[node.id]?.download) && (
-        <a
-          href={
-            exportedAssets?.[node.id]?.download ??
-            `/api/projects/${assets?.projectId}/files/${encodeURIComponent(node.props.attachment.fileId)}/download`
-          }
-          target="_blank"
-          rel="noreferrer"
-        >
-          {node.props.attachment.name} 다운로드
-        </a>
-      )}
+      {node.props.attachment &&
+        !assets?.templateId &&
+        (assets || exportedAssets?.[node.id]?.download) && (
+          <a
+            href={
+              exportedAssets?.[node.id]?.download ??
+              `/api/projects/${assets?.projectId}/files/${encodeURIComponent(node.props.attachment.fileId)}/download`
+            }
+            target="_blank"
+            rel="noreferrer"
+          >
+            {node.props.attachment.name} 다운로드
+          </a>
+        )}
     </div>
   );
 }
@@ -118,7 +121,7 @@ export function FileImage({ node }: { node: UiNode }) {
       if (!assets || !file) return;
       try {
         const result = await api<{ ready: boolean; previewUrl: string }>(
-          `/projects/${assets.projectId}/files/${encodeURIComponent(file.fileId)}/preview`,
+          `/${assets.templateId ? `templates/${assets.templateId}` : `projects/${assets.projectId}`}/files/${encodeURIComponent(file.fileId)}/preview`,
         );
         if (!active) return;
         if (result.ready) setUrl(result.previewUrl);
@@ -133,7 +136,7 @@ export function FileImage({ node }: { node: UiNode }) {
       active = false;
       clearTimeout(timer);
     };
-  }, [assets?.projectId, file?.fileId, retry]);
+  }, [assets?.projectId, assets?.templateId, file?.fileId, retry]);
   if (url)
     return (
       <img

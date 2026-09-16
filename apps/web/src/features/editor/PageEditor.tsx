@@ -44,16 +44,35 @@ import { NodeRenderer } from './NodeRenderer';
 import { useHistory } from './history';
 import { FileAssetsProvider } from './files/FileAssets';
 import type { Page, PageSummary } from './types';
-export function PageEditor({
+import { PageSettings } from './PageSettings';
+import { ThemeEditor } from './ThemeEditor';
+import { TemplatePanel } from './TemplatePanel';
+import { DesignPanel } from './DesignPanel';
+import { AiChatPanel, type Proposal, type ApplyOptions } from './AiChatPanel';
+import { CarouselEditingProvider } from './CarouselEditing';
+export function PageEditor(props: Parameters<typeof PageEditorContent>[0]) {
+  return (
+    <CarouselEditingProvider>
+      <PageEditorContent {...props} />
+    </CarouselEditingProvider>
+  );
+}
+function PageEditorContent({
   initial,
   pageNav,
   onDirty,
   onSaved,
+  onDeleted,
+  onAiCreated,
+  onMcp,
 }: {
   initial: Page;
-  pageNav: React.ReactNode;
+  pageNav: (actions?: React.ReactNode) => React.ReactNode;
   onDirty: (value: boolean) => void;
   onSaved: (page: PageSummary) => void;
+  onDeleted: (id: string) => Promise<void>;
+  onAiCreated?: (page: Page) => void;
+  onMcp?: () => void;
 }) {
   const [history, dispatch] = useHistory(initial.spec);
   const spec = history.present;
@@ -65,10 +84,31 @@ export function PageEditor({
   const [zoom, setZoom] = useState(100);
   const [canvasWidths, setCanvasWidths] = useState({ desktop: 1440, tablet: 768, mobile: 375 });
   const canvasScroll = useRef<HTMLDivElement>(null);
+  const [viewportHeight, setViewportHeight] = useState(800);
+  useEffect(() => {
+    const el = canvasScroll.current;
+    if (!el) return;
+    const measure = () => {
+      const css = getComputedStyle(el);
+      setViewportHeight(
+        Math.max(
+          320,
+          (el.clientHeight - parseFloat(css.paddingTop) - parseFloat(css.paddingBottom)) /
+            (zoom / 100),
+        ),
+      );
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [zoom]);
   const [name, setName] = useState(initial.name);
   const [savedSpec, setSavedSpec] = useState(initial.spec);
   const [savedName, setSavedName] = useState(initial.name);
   const [revision, setRevision] = useState(initial.revision);
+  const revisionRef = useRef(revision);
+  revisionRef.current = revision;
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState('');
@@ -83,7 +123,60 @@ export function PageEditor({
     };
   }, []);
   const dirty = JSON.stringify(spec) !== JSON.stringify(savedSpec) || name !== savedName;
-  const readOnly = initial.role === 'VIEWER';
+  const [aiApplying, setAiApplying] = useState(false);
+  const [rightTab, setRightTab] = useState<'design' | 'ai'>('design');
+  const readOnly = initial.role === 'VIEWER' || aiApplying;
+  async function applyProposal(proposal: Proposal, options: ApplyOptions) {
+    if (dirty || inFlight.current || readOnly)
+      throw new Error('편집 내용을 저장하고 최신 화면에서 다시 적용해 주세요.');
+    inFlight.current = true;
+    setAiApplying(true);
+    try {
+      const page = await api<Page>(`/proposals/${proposal.id}/apply`, {
+        method: 'POST',
+        body: JSON.stringify(options),
+      });
+      if (!mounted.current) return;
+      if (page.id !== initial.id) {
+        onAiCreated?.(page);
+        return;
+      }
+      dispatch({ type: 'edit', spec: page.spec });
+      setSavedSpec(page.spec);
+      setName(page.name);
+      setSavedName(page.name);
+      setRevision(page.revision);
+      revisionRef.current = page.revision;
+      setConflict(false);
+      setError('');
+      onSaved(page);
+    } finally {
+      inFlight.current = false;
+      if (mounted.current) setAiApplying(false);
+    }
+  }
+  useEffect(() => {
+    let active = true;
+    const check = async () => {
+      try {
+        const page = await api<Page>(`/pages/${initial.id}`);
+        if (active && !inFlight.current && revisionRef.current === revision)
+          setConflict(page.revision !== revision);
+      } catch {
+        /* Saving and chat requests report access failures. */
+      }
+    };
+    const timer = setInterval(() => {
+      if (document.visibilityState === 'visible') void check();
+    }, 15000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [initial.id, revision]);
+  const templateTarget = registry[selected.type].children
+    ? selected
+    : (findParent(spec.root, selected.id) ?? spec.root);
   useEffect(() => {
     onDirty(dirty);
     const prevent = (e: BeforeUnloadEvent) => {
@@ -94,30 +187,59 @@ export function PageEditor({
     window.addEventListener('beforeunload', prevent);
     return () => window.removeEventListener('beforeunload', prevent);
   }, [dirty, onDirty]);
-  const save = useCallback(async () => {
-    if (!dirty || inFlight.current || readOnly || conflict) return;
+  const save = useCallback(
+    async (nextName = name) => {
+      if (inFlight.current || readOnly || conflict || !nextName.trim()) return false;
+      if (!dirty && nextName === name) return true;
+      inFlight.current = true;
+      setSaving(true);
+      setError('');
+      try {
+        const result = await api<Page>(`/pages/${initial.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ name: nextName, spec, baseRevision: revision }),
+        });
+        if (!mounted.current) return false;
+        setRevision(result.revision);
+        revisionRef.current = result.revision;
+        setSavedSpec(spec);
+        setSavedName(nextName);
+        setName(nextName);
+        onSaved(result);
+        return true;
+      } catch (e) {
+        if (!mounted.current) return false;
+        setError(errorMessage(e));
+        if (e instanceof ApiError && e.status === 409) setConflict(true);
+        return false;
+      } finally {
+        inFlight.current = false;
+        if (mounted.current) setSaving(false);
+      }
+    },
+    [dirty, readOnly, conflict, initial.id, name, spec, revision, onSaved],
+  );
+  async function deletePage() {
+    if (inFlight.current || readOnly || conflict) return false;
     inFlight.current = true;
     setSaving(true);
     setError('');
     try {
-      const result = await api<Page>(`/pages/${initial.id}`, {
-        method: 'PUT',
-        body: JSON.stringify({ name, spec, baseRevision: revision }),
+      await api(`/pages/${initial.id}`, {
+        method: 'DELETE',
+        body: JSON.stringify({ baseRevision: revision }),
       });
-      if (!mounted.current) return;
-      setRevision(result.revision);
-      setSavedSpec(spec);
-      setSavedName(name);
-      onSaved(result);
+      await onDeleted(initial.id);
+      return true;
     } catch (e) {
-      if (!mounted.current) return;
       setError(errorMessage(e));
       if (e instanceof ApiError && e.status === 409) setConflict(true);
+      return false;
     } finally {
       inFlight.current = false;
       if (mounted.current) setSaving(false);
     }
-  }, [dirty, readOnly, conflict, initial.id, name, spec, revision, onSaved]);
+  }
   const [showHistory, setShowHistory] = useState(false);
   const [revisionsList, setRevisionsList] = useState<
     Array<{
@@ -133,6 +255,7 @@ export function PageEditor({
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.target as HTMLElement).closest('dialog')) return;
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
         if (dirty && !saving && !readOnly && !conflict) {
@@ -192,7 +315,7 @@ export function PageEditor({
       (registry[selected.type].children
         ? selected.id
         : (findParent(spec.root, selected.id)?.id ?? spec.root.id));
-    const node = createNode(type);
+    const node = createNode(type, Boolean(spec.theme));
     change(() => insertNode(spec, parent, node));
     setSelected(node.id);
   }
@@ -253,6 +376,14 @@ export function PageEditor({
   }
   useEffect(() => {
     function keyboard(event: KeyboardEvent) {
+      if ((event.target as HTMLElement).closest('dialog')) return;
+      if ((event.target as HTMLElement).closest('.ai-chat-panel')) return;
+      if (
+        (event.ctrlKey || event.metaKey) &&
+        ['c', 'x'].includes(event.key.toLowerCase()) &&
+        !window.getSelection()?.isCollapsed
+      )
+        return;
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
         event.preventDefault();
         void save();
@@ -394,6 +525,11 @@ export function PageEditor({
           ))}
         </div>
         <div className="toolbar-actions">
+          {onMcp && (
+            <Button variant="ghost" onClick={onMcp}>
+              MCP 연결
+            </Button>
+          )}
           <Button
             variant="ghost"
             onClick={() => void openHistory()}
@@ -448,7 +584,16 @@ export function PageEditor({
       <div className={`editor-body ${preview ? 'is-preview' : ''}`}>
         {!preview && (
           <aside className="left-panel">
-            {pageNav}
+            {pageNav(
+              <PageSettings
+                name={name}
+                disabled={readOnly || conflict}
+                busy={saving}
+                error={error}
+                onRename={save}
+                onDelete={deletePage}
+              />,
+            )}
             <div className="panel-tabs">
               <button
                 className={tab === 'elements' ? 'active' : ''}
@@ -459,10 +604,36 @@ export function PageEditor({
               <button className={tab === 'layers' ? 'active' : ''} onClick={() => setTab('layers')}>
                 레이어
               </button>
+              <button
+                className={tab === 'templates' ? 'active' : ''}
+                onClick={() => setTab('templates')}
+              >
+                템플릿
+              </button>
             </div>
             <div className="panel-scroll">
               {tab === 'elements' ? (
                 <Palette onAdd={add} disabled={readOnly} />
+              ) : tab === 'templates' ? (
+                <TemplatePanel
+                  spec={spec}
+                  pageId={initial.id}
+                  pageName={name}
+                  projectId={initial.project_id}
+                  disabled={readOnly || conflict}
+                  insertDisabled={isLocked(spec.root, templateTarget.id)}
+                  targetName={templateTarget.name}
+                  onInsert={(template, templateName) => {
+                    if (readOnly || conflict) return false;
+                    const node = cloneNode(template.root);
+                    node.name = templateName;
+                    const next = insertNode(spec, templateTarget.id, node);
+                    dispatch({ type: 'edit', spec: next });
+                    setSelected(node.id);
+                    setError('');
+                    return true;
+                  }}
+                />
               ) : (
                 <Layers
                   node={spec.root}
@@ -502,9 +673,19 @@ export function PageEditor({
           </div>
           <div className="canvas-scroll" ref={canvasScroll}>
             <div className="artboard-wrap" style={{ width: (width * zoom) / 100 }}>
-              <div className="artboard" style={{ width, zoom: zoom / 100 }}>
+              <div
+                className="artboard"
+                style={
+                  {
+                    width,
+                    zoom: zoom / 100,
+                    '--page-viewport-height': `${viewportHeight}px`,
+                  } as React.CSSProperties
+                }
+              >
                 <NodeRenderer
                   root
+                  theme={spec.theme}
                   node={spec.root}
                   breakpoint={breakpoint}
                   selectedId={selected.id}
@@ -559,44 +740,95 @@ export function PageEditor({
           </div>
         </main>
         {!preview && (
-          <aside className="right-panel">
+          <DesignPanel>
             <div className="panel-tabs">
-              <span className="active">디자인</span>
+              <button
+                className={rightTab === 'design' ? 'active' : ''}
+                onClick={() => setRightTab('design')}
+              >
+                디자인
+              </button>
+              <button
+                className={rightTab === 'ai' ? 'active' : ''}
+                onClick={() => setRightTab('ai')}
+              >
+                AI
+              </button>
             </div>
-            <div className="panel-scroll">
-              <div className="page-name-field">
-                <label>
-                  페이지 이름
-                  <input
-                    disabled={readOnly}
-                    value={name}
-                    maxLength={100}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                </label>
-              </div>
-              <Inspector
-                node={selected}
+            {rightTab === 'ai' ? (
+              <AiChatPanel
+                projectId={initial.project_id}
+                pageId={initial.id}
+                pageName={name}
+                selectedId={selected.id}
+                selectedName={selected.name}
+                revision={revision}
                 breakpoint={breakpoint}
-                root={selected.id === spec.root.id}
-                disabled={
-                  readOnly ||
-                  (!!findParent(spec.root, selected.id) &&
-                    isLocked(spec.root, findParent(spec.root, selected.id)!.id))
-                }
-                onUpdate={(action) =>
-                  change(() =>
-                    editSpec(spec, (root) => {
-                      action(findNode(root, selected.id)!);
-                    }),
-                  )
-                }
-                onDelete={remove}
-                onDuplicate={duplicate}
-                onReorder={reorder}
+                dirty={dirty}
+                readOnly={readOnly}
+                busy={saving || aiApplying}
+                onSave={() => save()}
+                onApply={applyProposal}
               />
-            </div>
-          </aside>
+            ) : (
+              <div className="panel-scroll">
+                {selected.id === spec.root.id && (
+                  <ThemeEditor
+                    theme={spec.theme}
+                    disabled={readOnly || spec.root.locked || conflict}
+                    onUseDefaults={() =>
+                      change(() =>
+                        editSpec(spec, (root) => {
+                          for (const key of [
+                            'background',
+                            'color',
+                            'radius',
+                            'gap',
+                            'padding',
+                          ] as const) {
+                            delete root.style[key];
+                            for (const override of Object.values(root.responsive))
+                              delete override[key];
+                          }
+                        }),
+                      )
+                    }
+                    onChange={(theme) =>
+                      change(() => {
+                        const next = structuredClone(spec);
+                        if (theme) next.theme = theme;
+                        else delete next.theme;
+                        return next;
+                      })
+                    }
+                  />
+                )}
+                <Inspector
+                  node={selected}
+                  pageRoot={spec.root}
+                  parent={findParent(spec.root, selected.id)}
+                  theme={spec.theme}
+                  breakpoint={breakpoint}
+                  root={selected.id === spec.root.id}
+                  disabled={
+                    readOnly ||
+                    (!!findParent(spec.root, selected.id) &&
+                      isLocked(spec.root, findParent(spec.root, selected.id)!.id))
+                  }
+                  onUpdate={(action) =>
+                    change(() =>
+                      editSpec(spec, (root) => {
+                        action(findNode(root, selected.id)!);
+                      }),
+                    )
+                  }
+                  onDelete={remove}
+                  onDuplicate={duplicate}
+                  onReorder={reorder}
+                />
+              </div>
+            )}
+          </DesignPanel>
         )}
       </div>
 

@@ -5,7 +5,14 @@ import { Database } from '../database/database.js';
 import { config } from '../config.js';
 import { hash, randomToken, encrypt, decrypt } from './crypto.js';
 import { OidcService, type Tokens } from './oidc.service.js';
-export type Identity = { id: string; displayName: string; csrfToken: string };
+import { claimAutoShares, lockEmail } from '../sharing/claim.js';
+export type Identity = {
+  id: string;
+  displayName: string;
+  nickname: string | null;
+  email: string | null;
+  csrfToken: string;
+};
 export type AuthRequest = Request & { identity: Identity };
 export function cookie(request: Request, name: string) {
   return (
@@ -74,20 +81,26 @@ export class AuthService {
     });
     if (!tokens.id_token) throw new UnauthorizedException('ID 토큰이 없습니다.');
     const claims = await this.oidc.identity(tokens.id_token, attempt.rows[0].nonce);
+    const email = await this.oidc.email(tokens, claims);
     const user = await this.user(
       config.issuer,
       claims.sub!,
       typeof claims.name === 'string' ? claims.name.slice(0, 100) : '새 사용자',
+      email,
     );
     await this.createSession(user.id, response, tokens);
     response.redirect('/');
   }
-  private async user(issuer: string, subject: string, name: string) {
-    const result = await this.db.pool.query(
-      'INSERT INTO users(id,issuer,subject,display_name) VALUES($1,$2,$3,$4) ON CONFLICT(issuer,subject) DO UPDATE SET subject=EXCLUDED.subject RETURNING id',
-      [randomUUID(), issuer, subject, name],
-    );
-    return result.rows[0];
+  private async user(issuer: string, subject: string, name: string, email: string | null = null) {
+    return this.db.transaction(async (client) => {
+      if (email) await lockEmail(client, email);
+      const result = await client.query(
+        'INSERT INTO users(id,issuer,subject,display_name,email) VALUES($1,$2,$3,$4,$5) ON CONFLICT(issuer,subject) DO UPDATE SET display_name=EXCLUDED.display_name,email=EXCLUDED.email RETURNING id',
+        [randomUUID(), issuer, subject, email ? email.split('@')[0] : name, email],
+      );
+      await claimAutoShares(client, result.rows[0].id);
+      return result.rows[0];
+    });
   }
   async devLogin(request: Request, response: Response) {
     if (!config.bypass || config.NODE_ENV === 'production') throw new ForbiddenException();
@@ -120,7 +133,7 @@ export class AuthService {
     if (!token) throw new UnauthorizedException('로그인이 필요합니다.');
     const identity = await this.db.transaction(async (client) => {
       const result = await client.query(
-        'SELECT s.*, u.display_name,u.issuer,u.subject FROM sessions s JOIN users u ON u.id=s.user_id WHERE token_hash=$1 AND expires_at>now() FOR UPDATE OF s',
+        'SELECT s.*, u.display_name,u.nickname,u.email,u.issuer,u.subject FROM sessions s JOIN users u ON u.id=s.user_id WHERE token_hash=$1 AND expires_at>now() FOR UPDATE OF s',
         [hash(token)],
       );
       const session = result.rows[0];
@@ -139,10 +152,20 @@ export class AuthService {
             grant_type: 'refresh_token',
             refresh_token: decrypt(session.refresh_token),
           });
+          let emailClaims: { sub: string; [key: string]: unknown } = { sub: session.subject };
           if (tokens.id_token) {
             const claims = await this.oidc.identity(tokens.id_token);
             if (claims.sub !== session.subject) throw new Error('Subject mismatch');
+            emailClaims = { ...claims, sub: claims.sub! };
           }
+          const email = await this.oidc.email(tokens, emailClaims);
+          if (email) await lockEmail(client, email);
+          await client.query(
+            'UPDATE users SET email=$2,display_name=COALESCE($3,display_name) WHERE id=$1',
+            [session.user_id, email, email ? email.split('@')[0] : null],
+          );
+          session.email = email;
+          if (email) session.display_name = email.split('@')[0];
           await client.query(
             'UPDATE sessions SET refresh_token=$2,access_expires_at=$3 WHERE token_hash=$1',
             [
@@ -158,7 +181,9 @@ export class AuthService {
       }
       return {
         id: session.user_id,
-        displayName: session.display_name,
+        displayName: session.nickname ?? session.display_name,
+        nickname: session.nickname,
+        email: session.email,
         csrfToken: session.csrf_token,
       };
     });
@@ -169,6 +194,13 @@ export class AuthService {
         throw new ForbiddenException('요청을 확인할 수 없습니다. 새로고침 후 다시 시도해 주세요.');
     }
     return identity;
+  }
+  async updateNickname(userId: string, nickname: string | null) {
+    const result = await this.db.pool.query(
+      'UPDATE users SET nickname=$2 WHERE id=$1 RETURNING nickname,COALESCE(nickname,display_name) AS "displayName"',
+      [userId, nickname],
+    );
+    return result.rows[0];
   }
   async logout(request: Request, response: Response) {
     const removed = await this.db.pool.query(

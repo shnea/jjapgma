@@ -1,4 +1,4 @@
-import { validateSpec, type UiSpec } from '@jjapgma/ui-spec';
+import { validateSpec, type UiSpec, type UiNode, type TableData } from '@jjapgma/ui-spec';
 import { api } from '../../../lib/api';
 import type { ExportAssets } from './ExportAssets';
 import { createZip } from './zip';
@@ -21,10 +21,30 @@ export async function createHtmlArchive(pageName: string, input: UiSpec, project
       files[filename] = await response.text();
     }),
   );
-  const queue = [spec.root];
+  const queue: UiNode[] = [spec.root];
   while (queue.length) {
     const node = queue.pop()!;
     queue.push(...node.children);
+    if (node.type === 'table' && node.props.table) {
+      const table: TableData = node.props.table;
+      for (const column of table.columns.filter((column) => column.type === 'image')) {
+        for (const row of table.rows) {
+          const src: string | undefined = row.cells[column.id];
+          if (!src || !/^\/(?!\/)[^\\\s]*$/.test(src)) continue;
+          const response: Response = await fetch(src);
+          if (!response.ok || !response.headers.get('content-type')?.startsWith('image/'))
+            throw new Error(`${node.name}의 ${column.title} 이미지를 내보낼 수 없습니다.`);
+          const extension: string = response.headers
+            .get('content-type')!
+            .split('/')[1]
+            .split(/[;+]/)[0]
+            .replace(/[^a-z0-9]/gi, '');
+          const filename = `assets/table-${Object.keys(assets).length}.${extension}`;
+          files[filename] = new Uint8Array(await response.arrayBuffer());
+          assets[`${node.id}:${row.id}:${column.id}`] = { src: filename };
+        }
+      }
+    }
     if (node.props.attachment) {
       const file = node.props.attachment;
       const result = await api<{ ready: boolean; previewUrl: string }>(

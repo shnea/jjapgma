@@ -1,11 +1,23 @@
-import { Body, Controller, Delete, Get, Inject, Module, Param, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Inject,
+  Module,
+  Param,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { Database } from '../database/database.js';
 import { AuthModule, AuthGuard } from '../auth/auth.module.js';
 import type { AuthRequest } from '../auth/auth.service.js';
 import { parse, uuid } from '../common/http.js';
-import { projectAccess } from './access.js';
+import { projectAccess, ownerAccess } from './access.js';
+import { claimAutoShares } from '../sharing/claim.js';
 const projectInput = z
   .object({
     name: z.string().trim().min(1).max(100),
@@ -17,9 +29,10 @@ const projectInput = z
 class ProjectsController {
   constructor(@Inject(Database) private readonly db: Database) {}
   @Get() async list(@Req() request: AuthRequest) {
+    await this.db.transaction((client) => claimAutoShares(client, request.identity.id));
     return (
       await this.db.pool.query(
-        'SELECT p.*,m.role,(SELECT count(*)::int FROM pages WHERE project_id=p.id) AS "pageCount" FROM projects p JOIN members m ON m.project_id=p.id WHERE m.user_id=$1 ORDER BY p.updated_at DESC LIMIT 200',
+        'SELECT p.*,m.role,(SELECT count(*)::int FROM pages WHERE project_id=p.id AND deleted_at IS NULL) AS "pageCount" FROM projects p JOIN members m ON m.project_id=p.id WHERE m.user_id=$1 ORDER BY p.updated_at DESC LIMIT 200',
         [request.identity.id],
       )
     ).rows;
@@ -51,7 +64,7 @@ class ProjectsController {
   @Delete(':id') async delete(@Req() request: AuthRequest, @Param('id') value: string) {
     const id = parse(uuid, value);
     return this.db.transaction(async (client) => {
-      await projectAccess(client, id, request.identity.id, true);
+      await ownerAccess(client, id, request.identity.id);
       await client.query('UPDATE audit SET project_id=NULL WHERE project_id=$1', [id]);
       await client.query('DELETE FROM projects WHERE id=$1', [id]);
       await client.query(

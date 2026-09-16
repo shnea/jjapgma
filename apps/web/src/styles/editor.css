@@ -335,13 +335,13 @@
   min-height: 200px;
 }
 .artboard {
-  min-height: 900px;
+  min-height: var(--page-viewport-height, 900px);
   background: white;
   box-shadow: 0 3px 15px #34402b0b;
   transform-origin: top left;
 }
 .artboard > .render-node {
-  min-height: 900px;
+  min-height: var(--page-viewport-height, 900px);
 }
 .canvas-bottom {
   height: 38px;
@@ -361,11 +361,6 @@
   padding: 3px;
   font-size: 12px;
 }
-.page-name-field {
-  padding: 15px 17px;
-  border-bottom: 1px solid var(--border);
-}
-.page-name-field label,
 .inspector label {
   display: flex;
   flex-direction: column;
@@ -374,10 +369,6 @@
   color: #79846f;
   margin-bottom: 12px;
 }
-.page-name-field label {
-  margin: 0;
-}
-.page-name-field input,
 .inspector input,
 .inspector select {
   font-size: 12px;
@@ -617,4 +608,3 @@
   font-size: 12px;
   color: #6b7280;
 }
-

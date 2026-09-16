@@ -3,7 +3,7 @@ import { nodeId } from './id.js';
 import { inputTypes, optionTypes } from './catalog/forms.js';
 import { horizontalTypes } from './catalog/layout.js';
 import { validateSpec, type UiNode, type UiSpec, type Breakpoint } from './schema.js';
-export function createNode(typeOrLegacy: string): UiNode {
+export function createNode(typeOrLegacy: string, inheritTheme = false): UiNode {
   const legacy = legacyTypeAliases[typeOrLegacy];
   const type = (legacy ? legacy.type : typeOrLegacy) as ComponentType;
   if (!registry[type]) {
@@ -16,6 +16,86 @@ export function createNode(typeOrLegacy: string): UiNode {
     locked: false,
     props: {
       text: registry[type].text,
+      ...(type === 'chart'
+        ? {
+            chartVariant: 'bar' as const,
+            chartUnit: '건',
+            chartData: [
+              { label: '4월', value: 18 },
+              { label: '5월', value: 24 },
+              { label: '6월', value: 20 },
+              { label: '7월', value: 32 },
+              { label: '8월', value: 28 },
+              { label: '9월', value: 42 },
+            ],
+          }
+        : {}),
+      ...(type === 'wizard'
+        ? { text: '단계별 입력', wizardCompletionText: '입력 단계를 모두 확인했습니다.' }
+        : {}),
+      ...(type === 'sidePanel'
+        ? {
+            panelSide: 'left' as const,
+            panelMode: 'collapsible' as const,
+            collapseMode: 'rail' as const,
+            collapsedWidth: 64,
+            defaultCollapsed: false,
+            mobileDrawer: true,
+            mobileTrigger: 'auto' as const,
+            drawerScope: 'parent' as const,
+          }
+        : {}),
+      ...(type === 'drawer'
+        ? {
+            isOpen: false,
+            panelSide: 'left' as const,
+            drawerScope: 'parent' as const,
+            closeOnBackdrop: true,
+          }
+        : {}),
+      ...(type === 'carousel'
+        ? {
+            carouselLoop: true,
+            carouselAutoplay: false,
+            carouselInterval: 5000,
+            carouselArrows: true,
+            carouselDots: true,
+            carouselCounter: true,
+            carouselVariant: 'controls' as const,
+            carouselSizing: 'ratio' as const,
+            carouselRatio: '16/9' as const,
+            carouselHeight: 320,
+            carouselFit: 'cover' as const,
+          }
+        : {}),
+      ...(type === 'searchBox'
+        ? {
+            placeholder: '메뉴 검색',
+            mobileSearch: 'icon' as const,
+            searchAlign: 'right' as const,
+            searchWidth: 240,
+          }
+        : {}),
+      ...(type === 'chat'
+        ? {
+            placeholder: '메시지를 입력하세요',
+            showTimestamps: true,
+            chatLoading: false,
+            chatMessages: [
+              {
+                role: 'user' as const,
+                content: '새로운 화면을 함께 만들어 볼까요?',
+                time: '오후 2:30',
+              },
+              {
+                role: 'assistant' as const,
+                content:
+                  '좋아요! **어떤 화면**이 필요한지 알려주세요.\n\n- 필요한 기능\n- 원하는 분위기',
+                time: '오후 2:31',
+              },
+            ],
+          }
+        : {}),
       ...(inputTypes.includes(type) ? { placeholder: '입력해 주세요' } : {}),
       ...(inputTypes.includes(type)
         ? {
@@ -60,24 +140,37 @@ export function createNode(typeOrLegacy: string): UiNode {
       ...(type === 'emptyState' ? { stateType: 'empty' as const } : {}),
       ...(type === 'alert' ? { stateType: 'info' as const, text: '알림 메시지입니다.' } : {}),
       ...(type === 'modal' ? { isOpen: true, text: '모달 대화상자' } : {}),
+      ...(type === 'nonModal' ? { isOpen: true, text: 'Non-modal 창' } : {}),
       ...(type === 'dialog' ? { text: '다이얼로그 메시지입니다.', titleLevel: 'h3' as const } : {}),
       ...(type === 'button' ? { variant: 'default' as const } : {}),
-      ...(legacy?.props),
+      ...legacy?.props,
     },
     style: registry[type].children
       ? {
           direction: horizontalTypes.includes(type) ? 'row' : 'column',
-          gap: 16,
-          padding: 24,
-          ...(type === 'card' ? { background: '#ffffff', radius: 12 } : {}),
+          ...(!inheritTheme ? { gap: 16, padding: 24 } : {}),
+          ...(type === 'card' && !inheritTheme ? { background: '#ffffff', radius: 12 } : {}),
           ...(type === 'grid' ? { gridColumns: 2, gridRows: 1 } : {}),
-          ...(type === 'modal' ? { background: '#ffffff', radius: 12, width: '480px' } : {}),
-          ...(type === 'dialog' ? { background: '#ffffff', radius: 12, width: '400px' } : {}),
-          ...(legacy?.style),
+          ...(type === 'sidePanel'
+            ? { width: '240px', padding: 16, gap: 16, background: 'theme:surface' }
+            : {}),
+          ...(type === 'drawer'
+            ? { width: '300px', padding: 20, background: 'theme:surface' }
+            : {}),
+          ...(type === 'carousel' ? { width: '100%', padding: 0, gap: 0 } : {}),
+          ...(type === 'modal' || type === 'nonModal'
+            ? { ...(!inheritTheme ? { background: '#ffffff', radius: 12 } : {}), width: '480px' }
+            : {}),
+          ...(type === 'dialog'
+            ? { ...(!inheritTheme ? { background: '#ffffff', radius: 12 } : {}), width: '400px' }
+            : {}),
+          ...legacy?.style,
         }
-      : type === 'spacer'
-        ? { height: '48px' }
-        : {},
+      : type === 'chat'
+        ? { height: '560px', width: '100%' }
+        : type === 'spacer'
+          ? { height: '48px' }
+          : {},
     responsive: {},
     children: [],
   };
@@ -85,7 +178,7 @@ export function createNode(typeOrLegacy: string): UiNode {
 export function createSpec(): UiSpec {
   const root = createNode('container');
   root.name = '화면';
-  root.style = { direction: 'column', padding: 40, gap: 24, background: '#ffffff' };
+  root.style = { direction: 'column', padding: 40, gap: 24 };
   return { schemaVersion: 1, root };
 }
 export function findNode(root: UiNode, id: string): UiNode | undefined {
@@ -96,7 +189,19 @@ export function findNode(root: UiNode, id: string): UiNode | undefined {
   }
 }
 export function effectiveStyle(node: UiNode, breakpoint: Breakpoint) {
-  return { ...node.style, ...node.responsive[breakpoint] };
+  const override = node.responsive[breakpoint];
+  const style = { ...node.style, ...override };
+  // A row's bottom alignment must not become right alignment when stacked.
+  // Explicit per-device alignment remains authoritative, including old saved pages.
+  if (
+    breakpoint !== 'desktop' &&
+    node.style.direction === 'row' &&
+    override?.direction === 'column' &&
+    override.align === undefined &&
+    node.style.align === 'flex-end'
+  )
+    style.align = 'stretch';
+  return style;
 }
 export function isLocked(root: UiNode, id: string, ancestorLocked = false): boolean {
   const locked = ancestorLocked || root.locked;
@@ -134,11 +239,24 @@ export function findParent(root: UiNode, id: string): UiNode | undefined {
   }
 }
 export function cloneNode(node: UiNode): UiNode {
-  return {
-    ...structuredClone(node),
-    id: nodeId(),
-    children: node.children.map(cloneNode),
+  const copy = structuredClone(node),
+    ids = new Map<string, string>();
+  const visit = (n: UiNode) => {
+    const id = nodeId();
+    ids.set(n.id, id);
+    n.id = id;
+    n.children.forEach(visit);
   };
+  visit(copy);
+  const remap = (n: UiNode) => {
+    const action = n.props.overlayAction;
+    if (n.props.searchTargetId && ids.has(n.props.searchTargetId))
+      n.props.searchTargetId = ids.get(n.props.searchTargetId);
+    if (action?.targetId && ids.has(action.targetId)) action.targetId = ids.get(action.targetId);
+    n.children.forEach(remap);
+  };
+  remap(copy);
+  return copy;
 }
 export function moveNode(spec: UiSpec, id: string, parentId: string, index?: number): UiSpec {
   const node = findNode(spec.root, id);

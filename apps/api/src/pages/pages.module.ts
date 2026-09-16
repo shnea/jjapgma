@@ -1,12 +1,14 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Inject,
   Module,
   Param,
   Post,
   Put,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -28,11 +30,11 @@ class PagesController {
     @Param('projectId') id: string,
     @Body() body: unknown,
   ) {
-    return this.pages.create(
-      parse(uuid, id),
-      r.identity.id,
-      parse(z.object({ name }).strict(), body).name,
+    const input = parse(
+      z.object({ name, templateId: z.string().min(1).max(60).optional() }).strict(),
+      body,
     );
+    return this.pages.create(parse(uuid, id), r.identity.id, input.name, input.templateId);
   }
   @Get('pages/:pageId') get(@Req() r: AuthRequest, @Param('pageId') id: string) {
     return this.pages.get(parse(uuid, id), r.identity.id);
@@ -54,8 +56,43 @@ class PagesController {
   @Get('pages/:pageId/revisions') listRevisions(
     @Req() r: AuthRequest,
     @Param('pageId') id: string,
+    @Query('before') before?: string,
   ) {
-    return this.pages.listRevisions(parse(uuid, id), r.identity.id);
+    return this.pages.listRevisions(
+      parse(uuid, id),
+      r.identity.id,
+      before === undefined ? undefined : parse(z.coerce.number().int().positive(), before),
+    );
+  }
+  @Get('projects/:projectId/deleted-pages') trash(
+    @Req() r: AuthRequest,
+    @Param('projectId') id: string,
+  ) {
+    return this.pages.trash(parse(uuid, id), r.identity.id);
+  }
+  @Post('pages/:pageId/restore') restore(
+    @Req() r: AuthRequest,
+    @Param('pageId') id: string,
+    @Body() body: unknown,
+  ) {
+    const input = parse(
+      z
+        .object({
+          baseRevision: z.number().int().positive(),
+          revision: z.number().int().positive(),
+        })
+        .strict(),
+      body,
+    );
+    return this.pages.restore(parse(uuid, id), r.identity.id, input.baseRevision, input.revision);
+  }
+  @Delete('pages/:pageId') delete(
+    @Req() r: AuthRequest,
+    @Param('pageId') id: string,
+    @Body() body: unknown,
+  ) {
+    const input = parse(z.object({ baseRevision: z.number().int().min(1) }).strict(), body);
+    return this.pages.delete(parse(uuid, id), r.identity.id, input.baseRevision);
   }
   @Get('pages/:pageId/revisions/:revision') getRevision(
     @Req() r: AuthRequest,
@@ -66,5 +103,10 @@ class PagesController {
     return this.pages.getRevision(parse(uuid, id), r.identity.id, revisionNumber);
   }
 }
-@Module({ imports: [AuthModule], providers: [PagesService], controllers: [PagesController] })
+@Module({
+  imports: [AuthModule],
+  providers: [PagesService],
+  controllers: [PagesController],
+  exports: [PagesService],
+})
 export class PagesModule {}

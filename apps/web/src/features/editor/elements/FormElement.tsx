@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import { DatePickerControl } from './DatePickerControl';
 import type { UiNode } from '@jjapgma/ui-spec';
 import { FileUploadControl } from '../files/FileAssets';
+import { useNavigation } from '../NavigationRuntime';
 
 export const formTypes = [
   'input',
@@ -37,6 +38,14 @@ const legacyInputType: Record<string, string> = {
 
 export function FormElement({ node }: { node: UiNode }) {
   const [checked, setChecked] = useState(false);
+  const [value, setLocalValue] = useState('');
+  const { search } = useNavigation();
+  const setValue = (next: string) => {
+    setLocalValue(next);
+    if (node.type === 'input' && node.props.controlType === 'search' && node.props.searchTargetId)
+      search(node.props.searchTargetId, next);
+  };
+  const messageId = useId();
   const label = `${node.props.text}${node.props.required ? ' *' : ''}`;
   const showLabel = node.props.labelVisible !== false;
   const labelPosition = node.props.labelPosition ?? (node.type === 'checkbox' ? 'right' : 'top');
@@ -46,6 +55,8 @@ export function FormElement({ node }: { node: UiNode }) {
     disabled: node.props.disabled,
     required: node.props.required,
     'aria-label': label,
+    'aria-invalid': node.props.errorText ? true : undefined,
+    'aria-describedby': node.props.errorText || node.props.description ? messageId : undefined,
   };
   const options = (node.props.items ?? '').split('\n').filter(Boolean);
 
@@ -176,10 +187,18 @@ export function FormElement({ node }: { node: UiNode }) {
 
   let control;
   if (nodeType === 'textarea')
-    control = <textarea placeholder={node.props.placeholder} {...common} />;
+    control = (
+      <textarea id={`${messageId}-control`} placeholder={node.props.placeholder} {...common} />
+    );
   else if (nodeType === 'select' || nodeType === 'multiSelect')
     control = (
-      <select multiple={Boolean(node.props.multiple || nodeType === 'multiSelect')} {...common}>
+      <select
+        className={node.props.multiple ? '' : 'field-control'}
+        data-field-control={node.props.multiple ? undefined : true}
+        id={`${messageId}-control`}
+        multiple={Boolean(node.props.multiple || nodeType === 'multiSelect')}
+        {...common}
+      >
         {options.map((option, index) => (
           <option key={index}>{option}</option>
         ))}
@@ -193,6 +212,11 @@ export function FormElement({ node }: { node: UiNode }) {
     const isOtp = type === 'otp' || nodeType === 'otp';
     control = (
       <input
+        id={`${messageId}-control`}
+        className={['range', 'color', 'file'].includes(type) ? undefined : 'field-control'}
+        data-field-control={['range', 'color', 'file'].includes(type) ? undefined : true}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
         type={type === 'range' ? 'range' : isOtp ? 'text' : type}
         placeholder={node.props.placeholder}
         inputMode={isOtp ? 'numeric' : undefined}
@@ -203,19 +227,61 @@ export function FormElement({ node }: { node: UiNode }) {
     );
   }
 
-  return (
-    <label className={labelClass}>
-      {isLabelRight ? (
-        <>
-          {control}
-          {labelSpan}
-        </>
-      ) : (
-        <>
-          {labelSpan}
-          {control}
-        </>
+  const decorated =
+    node.type === 'input' &&
+    ['text', 'password', 'search', 'email', 'tel', 'url', 'number', 'otp'].includes(type) &&
+    (node.props.prefix || node.props.suffix || node.props.clearable);
+  const fieldControl = decorated ? (
+    <div className="element-input-adornment field-control" data-field-control>
+      {node.props.prefix && <span>{node.props.prefix}</span>}
+      {control}
+      {node.props.clearable && value && (
+        <button
+          type="button"
+          aria-label={`${label} 지우기`}
+          disabled={node.props.disabled}
+          onClick={() => {
+            setValue('');
+            document.getElementById(`${messageId}-control`)?.focus();
+          }}
+        >
+          ×
+        </button>
       )}
-    </label>
+      {node.props.suffix && <span>{node.props.suffix}</span>}
+    </div>
+  ) : (
+    control
+  );
+
+  return (
+    <div className="element-field-group">
+      <div className={`${labelClass}${node.props.errorText ? ' has-error' : ''}`}>
+        {isLabelRight ? (
+          <>
+            {fieldControl}
+            {showLabel && (
+              <label htmlFor={`${messageId}-control`} className="element-field-label">
+                {label}
+              </label>
+            )}
+          </>
+        ) : (
+          <>
+            {showLabel && (
+              <label htmlFor={`${messageId}-control`} className="element-field-label">
+                {label}
+              </label>
+            )}
+            {fieldControl}
+          </>
+        )}
+      </div>
+      {(node.props.errorText || node.props.description) && (
+        <p id={messageId} className={node.props.errorText ? 'field-error' : 'field-description'}>
+          {node.props.errorText || node.props.description}
+        </p>
+      )}
+    </div>
   );
 }

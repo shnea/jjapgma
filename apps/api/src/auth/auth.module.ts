@@ -1,5 +1,7 @@
 import {
   Controller,
+  Body,
+  Patch,
   Get,
   Post,
   Req,
@@ -15,6 +17,8 @@ import type { Request, Response } from 'express';
 import { AuthService, type AuthRequest } from './auth.service.js';
 import { OidcService } from './oidc.service.js';
 import { config } from '../config.js';
+import { z } from 'zod';
+import { parse } from '../common/http.js';
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(@Inject(AuthService) private readonly auth: AuthService) {}
@@ -44,6 +48,26 @@ class AuthController {
   }
   @Get('api/auth/me') @UseGuards(AuthGuard) me(@Req() request: AuthRequest) {
     return request.identity;
+  }
+  @Patch('api/account/profile') @UseGuards(AuthGuard) profile(
+    @Req() request: AuthRequest,
+    @Body() body: unknown,
+  ) {
+    const input = parse(
+      z
+        .object({
+          nickname: z
+            .string()
+            .trim()
+            .min(1)
+            .max(40)
+            .refine((v) => [...v].every((c) => c.charCodeAt(0) >= 32 && c.charCodeAt(0) !== 127))
+            .nullable(),
+        })
+        .strict(),
+      body,
+    );
+    return this.auth.updateNickname(request.identity.id, input.nickname);
   }
   @Post('api/auth/logout') @UseGuards(AuthGuard) logout(
     @Req() request: AuthRequest,

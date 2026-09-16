@@ -4,7 +4,10 @@ import { Login } from './features/auth/Login';
 import { Projects } from './features/projects/Projects';
 import { Editor } from './features/editor/Editor';
 import { Button } from './components/ui/Button';
+import { Invitation, pendingInvitation } from './features/sharing/Invitation';
+import { AccountPage } from './features/account/AccountPage';
 export function App() {
+  const [invitationToken] = useState(pendingInvitation);
   const [user, setUser] = useState<User | null>(null);
   const [dev, setDev] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -49,9 +52,12 @@ export function App() {
       </main>
     );
   if (!user) return <Login dev={dev} onLogin={() => void load()} />;
+  if (invitationToken) return <Invitation token={invitationToken} logout={() => void logout()} />;
   const project = /^\/projects\/([0-9a-f-]{36})$/.exec(window.location.pathname);
+  if (window.location.pathname === '/account')
+    return <AccountPage user={user} onUser={setUser} logout={() => void logout()} />;
   return project ? (
-    <Editor projectId={project[1]} />
+    <Editor projectId={project[1]} user={user} />
   ) : (
     <Projects user={user} logout={() => void logout()} />
   );

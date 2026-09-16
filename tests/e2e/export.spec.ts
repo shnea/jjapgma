@@ -2,7 +2,13 @@ import { test, expect } from '@playwright/test';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { createSpec, createNode } from '@jjapgma/ui-spec';
+import {
+  createSpec,
+  createNode,
+  createTemplate,
+  themePresets,
+  convertTable,
+} from '@jjapgma/ui-spec';
 import { openSpec } from './helpers';
 
 test('downloaded ZIP runs renderer styles and interactions offline from index.html', async ({
@@ -22,23 +28,75 @@ test('downloaded ZIP runs renderer styles and interactions offline from index.ht
   table.props.paginationMode = 'pagination';
   table.props.pageSize = 2;
   table.props.columnCount = 3;
+  table.props.table = convertTable(table.props);
+  table.props.table.striped = true;
+  table.props.table.firstColumn = 'number-select';
+  table.props.table.columns[1].type = 'badge';
+  table.props.table.columns[1].hidden = { mobile: true };
+  table.props.table.columns[2].title = '사진';
+  table.props.table.columns[2].type = 'image';
+  table.props.table.rows[0].cells['col-2'] = image.props.src!;
   radio.props.labelPosition = 'right';
   text.props.text = '</script><img src=x onerror="window.injected=true">';
   text.props.customCss = 'letter-spacing: 3px; border: 2px solid rgb(255, 0, 0)';
   spec.root.responsive.mobile = { gap: 37 };
   spec.root.children.push(tabs, date, table, radio, image, text);
+  spec.theme = structuredClone(themePresets[1].theme);
+  spec.theme.font = 'serif';
+  const themedButton = createNode('button');
+  themedButton.props.text = '테마 버튼';
+  spec.root.children.push(themedButton);
+  const formRow = createNode('container'),
+    formInput = createNode('input'),
+    formDate = createNode('input'),
+    formRange = createNode('dateRange'),
+    formButton = createNode('button');
+  formRow.style = { direction: 'row', gap: 12, padding: 12 };
+  formRow.responsive.mobile = { direction: 'column' };
+  formDate.props.controlType = 'date';
+  formDate.props.text = '조회일';
+  formRange.props.text = '조회 범위';
+  formButton.props.text = '조회';
+  formRow.children = [formInput, formDate, formRange, formButton];
+  spec.root.children.push(formRow);
+  const floating = createNode('nonModal'),
+    openFloating = createNode('button');
+  floating.props = { text: '내보낸 창', isOpen: false };
+  openFloating.props = {
+    text: '내보낸 창 열기',
+    overlayAction: { type: 'open', targetId: floating.id },
+  };
+  floating.children = [createNode('input')];
+  spec.root.children.push(openFloating, floating);
+  const chat = createNode('chat');
+  spec.root.children.push(chat);
+  spec.root.children.push(
+    createNode('chart'),
+    createTemplate('onboarding').root.children.find((n) => n.type === 'wizard')!,
+  );
   await openSpec(page, spec, '내보내기 <&>');
   const downloadAnchors: string[] = [];
   await page.exposeFunction('captureDownload', (name: string) => downloadAnchors.push(name));
-  await page.evaluate(() => document.addEventListener('click', event => {
-    if (event.target instanceof HTMLAnchorElement && event.target.download)
-      (window as unknown as { captureDownload: (name: string) => void }).captureDownload(event.target.download);
-  }));
+  await page.evaluate(() =>
+    document.addEventListener('click', (event) => {
+      if (event.target instanceof HTMLAnchorElement && event.target.download)
+        (window as unknown as { captureDownload: (name: string) => void }).captureDownload(
+          event.target.download,
+        );
+    }),
+  );
   await page.getByRole('button', { name: '내보내기', exact: true }).click();
   const pending = page.waitForEvent('download');
   await page.getByRole('button', { name: 'HTML 내보내기', exact: true }).click();
   const download = await pending;
-  expect(download.suggestedFilename(), JSON.stringify({ anchors: downloadAnchors, url: download.url(), failure: await download.failure() })).toMatch(/-html\.zip$/);
+  expect(
+    download.suggestedFilename(),
+    JSON.stringify({
+      anchors: downloadAnchors,
+      url: download.url(),
+      failure: await download.failure(),
+    }),
+  ).toMatch(/-html\.zip$/);
   const zip = await readFile((await download.path())!);
   const folder = testInfo.outputPath('exported');
   const names: string[] = [];
@@ -69,9 +127,60 @@ test('downloaded ZIP runs renderer styles and interactions offline from index.ht
   const errors: string[] = [];
   exported.on('pageerror', (e) => errors.push(e.message));
   await exported.goto(pathToFileURL(resolve(folder, 'index.html')).href);
+  await exported.getByRole('button', { name: '내보낸 창 열기' }).click();
+  const floatingWindow = exported.getByRole('dialog', { name: '내보낸 창', exact: true });
+  await expect(floatingWindow).toBeVisible();
+  const floatingBounds = await floatingWindow.boundingBox();
+  expect(Math.abs(floatingBounds!.y + floatingBounds!.height / 2 - 450)).toBeLessThan(2);
+  await floatingWindow.getByRole('button', { name: '닫기' }).click();
+  await expect(floatingWindow).toHaveCount(0);
   await expect(exported).toHaveTitle('내보내기 <&>');
+  await expect(exported.locator('.element-chart')).toBeVisible();
+  await expect(exported.locator('.chart-values dd').first()).toHaveText('18 건');
+  await exported.getByLabel('워크스페이스 이름', { exact: true }).fill('오프라인 팀');
+  await exported
+    .locator('.element-wizard')
+    .getByRole('button', { name: '다음', exact: true })
+    .click();
+  await exported
+    .locator('.element-wizard')
+    .getByRole('button', { name: '이전', exact: true })
+    .click();
+  await expect(exported.getByLabel('워크스페이스 이름', { exact: true })).toHaveValue(
+    '오프라인 팀',
+  );
+  await expect(exported.locator('.element-chat .chat-markdown strong')).toHaveText('어떤 화면');
+  await exported
+    .locator('.element-chat')
+    .getByLabel('메시지', { exact: true })
+    .fill('오프라인 전송');
+  await exported.locator('.element-chat').getByLabel('메시지', { exact: true }).press('Enter');
+  await expect(exported.locator('.element-chat .chat-message-user').last()).toContainText(
+    '오프라인 전송',
+  );
   const root = exported.locator('[data-node-id="' + spec.root.id + '"]');
+  await expect
+    .poll(() =>
+      exported.locator(`[data-node-id="${formRow.id}"]`).evaluate((row) => {
+        const centers = Array.from(
+          row.querySelectorAll('[data-field-control],.element-button'),
+        ).map((c) => {
+          const b = c.getBoundingClientRect();
+          return b.y + b.height / 2;
+        });
+        return Math.max(...centers) - Math.min(...centers);
+      }),
+    )
+    .toBeLessThan(1);
   await expect(root).toHaveCSS('flex-direction', 'column');
+  await expect(exported.getByRole('button', { name: '테마 버튼', exact: true })).toHaveCSS(
+    'background-color',
+    'rgb(36, 88, 166)',
+  );
+  await expect(exported.getByRole('button', { name: '테마 버튼', exact: true })).toHaveCSS(
+    'font-family',
+    /Georgia/,
+  );
   await expect(exported.getByText(text.props.text, { exact: true })).toBeVisible();
   expect(await exported.evaluate(() => 'injected' in window)).toBe(false);
   await expect(exported.locator('[data-node-id="' + text.id + '"]')).toHaveCSS(
@@ -79,6 +188,16 @@ test('downloaded ZIP runs renderer styles and interactions offline from index.ht
     '3px',
   );
   await expect(exported.getByTestId('node-image').locator('img')).toBeVisible();
+  await expect(exported.locator('.configured-table thead th')).toHaveCount(4);
+  await expect(exported.locator('.configured-table .table-badge')).toHaveCount(2);
+  await expect(exported.locator('.configured-table .table-cell-image')).toBeVisible();
+  expect(
+    await exported
+      .locator('.configured-table .table-cell-image')
+      .evaluate((img: HTMLImageElement) => img.naturalWidth),
+  ).toBeGreaterThan(0);
+  await exported.getByLabel('현재 페이지 전체 선택').check();
+  await expect(exported.locator('.table-toolbar').getByRole('status')).toContainText('2개 선택');
   expect(
     await exported
       .getByTestId('node-image')
@@ -103,6 +222,7 @@ test('downloaded ZIP runs renderer styles and interactions offline from index.ht
   );
   await exported.setViewportSize({ width: 375, height: 812 });
   await expect(root).toHaveCSS('gap', '37px');
+  await expect(exported.locator('.configured-table thead th')).toHaveCount(3);
   await expect(root).toHaveCSS('flex-direction', 'column');
   expect(await exported.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
     375,

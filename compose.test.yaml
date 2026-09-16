@@ -43,6 +43,10 @@ services:
       DEV_AUTH_BYPASS: 'true'
       FILE_SERVICE_BASE_URL: http://file-service:8080
       FILE_SERVICE_BEARER_TOKEN: isolated-file-test
+      AI_ENABLED: 'true'
+      AI_WEBHOOK_URL: http://file-service:8080/ai
+      AI_WEBHOOK_TOKEN: isolated-ai-webhook-token-32-characters
+      AI_MCP_TOKEN: isolated-ai-mcp-service-token-32-characters
       DATABASE_URL: postgres://jjapgma:isolated-test-only@db:5432/jjapgma_test
     depends_on:
       {
@@ -77,6 +81,12 @@ services:
     environment:
       CI: 'true'
       BASE_URL: http://nginx:8080
+      NODE_ENV: test
+      APP_URL: http://nginx:8080
+      DEV_AUTH_BYPASS: 'true'
+      REFRESH_TOKEN_ENCRYPTION_KEY: '1111111111111111111111111111111111111111111111111111111111111111'
+      NOTIFY_API_URL: http://file-service:8080/v1/notifications
+      NOTIFY_API_TOKEN: isolated-notify-test
       DATABASE_URL: postgres://jjapgma:isolated-test-only@db:5432/jjapgma_test
     depends_on: { nginx: { condition: service_healthy } }
     volumes: ['./test-results:/app/test-results']

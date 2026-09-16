@@ -38,6 +38,14 @@ services:
       OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:?Set OIDC_CLIENT_SECRET}
       OIDC_SCOPE: ${OIDC_SCOPE:-openid profile basic offline_access}
       REFRESH_TOKEN_ENCRYPTION_KEY: ${REFRESH_TOKEN_ENCRYPTION_KEY:?Set 64 hex characters}
+      SHARE_APPROVAL_MODE: ${SHARE_APPROVAL_MODE:-auto}
+      VERIFY_EMAIL_TTL_SECONDS: ${VERIFY_EMAIL_TTL_SECONDS:-86400}
+      NOTIFY_API_URL: ${NOTIFY_API_URL:-https://notify.shnea.kr/v1/notifications}
+      NOTIFY_API_TOKEN: ${NOTIFY_API_TOKEN:-}
+      AI_ENABLED: ${AI_ENABLED:-false}
+      AI_WEBHOOK_URL: ${AI_WEBHOOK_URL:-https://n8n.shnea.kr/webhook/jjapgma}
+      AI_WEBHOOK_TOKEN: ${AI_WEBHOOK_TOKEN:-}
+      AI_MCP_TOKEN: ${AI_MCP_TOKEN:-}
     depends_on: { migrate: { condition: service_completed_successfully } }
     healthcheck:
       test:
