@@ -15,6 +15,14 @@ createServer(async (request, response) => {
     let body = '';
     for await (const chunk of request) body += chunk;
     const payload = JSON.parse(body);
+    const prompt = payload.messages.at(-1).content;
+    const emptyReply = [
+      '빈 답변 제안 테스트',
+      '제안 없는 빈 답변 테스트',
+      '빈 답변 이미지 확인 누락 테스트',
+      '제안 후 워크플로 오류 테스트',
+      '제안 후 HTTP 오류 테스트',
+    ].includes(prompt);
     if (payload.messages.at(-1).content === '느린 응답 검증') {
       await new Promise((resolve) => setTimeout(resolve, 5000));
       response
@@ -147,7 +155,10 @@ createServer(async (request, response) => {
           },
         });
         if (proposal.isError) throw new Error('page proposal failed');
-      } else if (tools.tools.some((t) => t.name === 'apply_ui_patch')) {
+      } else if (
+        prompt !== '제안 없는 빈 답변 테스트' &&
+        tools.tools.some((t) => t.name === 'apply_ui_patch')
+      ) {
         const proposal = await client.callTool({
           name: 'apply_ui_patch',
           arguments: {
@@ -167,26 +178,39 @@ createServer(async (request, response) => {
         });
         if (proposal.isError) throw new Error('proposal failed');
       }
-      response.writeHead(200, { 'Content-Type': 'application/json' }).end(
-        JSON.stringify({
-          reply: '화면 구조를 확인했습니다. 변경 제안을 미리보고 적용해 주세요.',
-          ...(payload.messages.at(-1).content === '사용량 연동 테스트'
-            ? {
-                usage: {
-                  complete: true,
-                  calls: [
-                    { id: 'model:0', model: 'fixture/model', inputTokens: 100, outputTokens: 20 },
-                    { id: 'model:1', model: 'fixture/model', inputTokens: 80, outputTokens: 10 },
-                  ],
-                },
-              }
-            : {}),
-          imageFileId:
-            payload.messages.at(-1).content === '이미지 확인 누락 테스트'
+      response
+        .writeHead(prompt === '제안 후 HTTP 오류 테스트' ? 503 : 200, {
+          'Content-Type': 'application/json',
+        })
+        .end(
+          JSON.stringify({
+            reply:
+              prompt === '제안 후 응답 누락 테스트'
+                ? undefined
+                : emptyReply
+                  ? ' \n '
+                  : '화면 구조를 확인했습니다. 변경 제안을 미리보고 적용해 주세요.',
+            ...(prompt === '제안 후 워크플로 오류 테스트'
+              ? { error: 'fixture model failure' }
+              : {}),
+            ...(payload.messages.at(-1).content === '사용량 연동 테스트'
+              ? {
+                  usage: {
+                    complete: true,
+                    calls: [
+                      { id: 'model:0', model: 'fixture/model', inputTokens: 100, outputTokens: 20 },
+                      { id: 'model:1', model: 'fixture/model', inputTokens: 80, outputTokens: 10 },
+                    ],
+                  },
+                }
+              : {}),
+            imageFileId: ['이미지 확인 누락 테스트', '빈 답변 이미지 확인 누락 테스트'].includes(
+              prompt,
+            )
               ? undefined
               : payload.image?.fileId,
-        }),
-      );
+          }),
+        );
     } catch {
       response.writeHead(502).end();
     } finally {
@@ -256,6 +280,7 @@ createServer(async (request, response) => {
       uploadedFiles.set(fileId, {
         bytes: Buffer.from(await file.arrayBuffer()),
         mimeType: file.type,
+        category: form.get('category'),
       });
       response.end(JSON.stringify({ files: [{ fileId }] }));
     } catch {
@@ -275,7 +300,12 @@ createServer(async (request, response) => {
   if (request.url.startsWith('/files/download/')) {
     const file = uploadedFiles.get(request.url.split('/').at(-1));
     if (file) {
-      response.writeHead(200, { 'Content-Type': file.mimeType }).end(file.bytes);
+      response
+        .writeHead(200, {
+          'Content-Type': file.mimeType,
+          'X-Fixture-Category': file.category ?? 'default',
+        })
+        .end(file.bytes);
       return;
     }
     response.writeHead(200, { 'Content-Type': 'text/plain' }).end('fixture');

@@ -1,6 +1,45 @@
 # 짭그마 개발 진행도
 
-마지막 갱신: 2026-09-16. **전체 제품 완성이 아니라 Phase 1의 첫 동작 가능한 구현 단계입니다.** 다음 세션은 이 문서 → PROJECT_SETUP.md → 변경 영역의 코드/지침 순서로 시작합니다.
+마지막 갱신: 2026-09-18. **전체 제품 완성이 아니라 Phase 1의 첫 동작 가능한 구현 단계입니다.** 다음 세션은 이 문서 → PROJECT_SETUP.md → 변경 영역의 코드/지침 순서로 시작합니다.
+
+## 2026-09-18 모바일 기본 배치와 콘텐츠 넘침 보완
+
+- 사용자 캡처 `화면 캡처 2026-09-18 004100.png`에서 PC의 이미지/설명 가로 배치와 기술 목록 다중 열이 모바일에도 남아 좁아지고 연락처·문구가 겹치는 사례를 확인했습니다. 별도 에디터 UI 연동 지침은 없어 기존 공통 렌더러와 UI Spec의 effectiveStyle에서 보완했습니다.
+- 모바일 설정이 없는 그리드는 1열, 자동 너비의 container/card/grid는 가로 공간을 채웁니다. 하위 배치 영역·이미지·표·차트를 포함하는 행은 세로로 쌓고, 작은 조작 요소만 모인 행은 줄바꿈합니다. PC 최소 너비 상속을 해제하고 긴 문자·버튼 문구를 줄바꿈하며 모바일 세로 grow의 0 flex-basis 압축을 피합니다. 직접 지정한 모바일 값과 추가 CSS는 우선하고 가로 스크롤 영역의 방향/열 수는 유지합니다. 고정/비율 너비는 보존합니다. 기존 페이지 JSON·PC/태블릿 데이터를 다시 저장하거나 마이그레이션하지 않습니다. 자세한 예외는 UI_CONTROLS.md에 기록했습니다.
+- Docker 앱/Storybook 빌드, lint 0 warnings/errors, typecheck, 단위 22개, Story 12개, E2E 8개(총 42개)가 통과했습니다. 테스트 컨테이너에서 `npm run lint`, `npm run typecheck`, `npm test`; Story는 mobile-layout/form-row/main-layout, E2E는 mobile-layout/inspector/export/storybook-export 파일을 해당 Playwright config로 실행했습니다. 새 페이지 재생성 없이 PC 데이터의 모바일 전환/새로고침, 직접 지정한 2열, 데스크톱 복원, 가로 스크롤, 폼, 실제 HTML/Storybook ZIP을 확인했습니다. 추가 HTML 사례의 복수 이미지 선택자 오류를 수정해 export 검사를 재실행했고, Story의 centered 레이아웃이 뷰포트를 넓히는 것을 캡처로 발견해 fullscreen과 문서 너비 검사를 추가했습니다. 최종 320/390px 검사를 통과하고 320px 캡처를 시각 확인했습니다. 전체 스위트·실제 모바일 기기 검사는 수행하지 않았습니다.
+- 개발 API/웹을 빌드하고 활성 AI 0건 확인 후 API/Nginx를 재생성했습니다. 이전 이미지는 각각 `pre-mobile-layout-20260918` 태그로 보존했습니다. 데이터 변경이 없어 이전 이미지로 되돌리면 기존 모바일 표시로 복귀합니다. 운영 배포·외부 n8n 변경은 수행하지 않았습니다. 사용자 staged compose.build.yaml과 앞선 변경은 보존했습니다.
+
+## 2026-09-18 저장된 AI 제안과 빈 최종 답변 구분
+
+- 개발 실행 `76e8bc13-6a1a-4561-b38c-c9f47676d4b2`는 get_design_context/get_templates/create_page가 성공해 28개 요소의 pending 제안을 저장했지만, 최종 HTTP 200 응답의 답변이 비어 missing_reply로 실패했습니다. 사용자가 AI Agent의 `output:""`와 제안 `3e748fd6-d55b-4fe1-ad6d-be3103981c4d`를 제공했습니다. 이전 HTTP 500/파서 오류 실행과 다른 사례입니다. 모델이 빈 출력을 낸 원인 자체는 확정하지 않았습니다.
+- 앱은 빈 문자열/공백 답변을 empty_reply로 구분하고 같은 실행·프로젝트·사용자의 pending 제안이 있을 때만 생성 사실과 설명 누락을 알리고 검토를 이어갑니다. 이미지 확인은 먼저 검사합니다. 제안 없음, 응답 필드/타입 오류, HTTP/JSON/명시적 워크플로 오류, 이미지 미확인은 실패합니다. 기존 외부 AI 연동 계약과 사용자 적용 권한을 유지하며 모델 재호출·성공 답변 생성·페이지 자동 적용은 하지 않습니다. DB 마이그레이션과 새 환경변수는 없습니다.
+- Docker 테스트 이미지/앱 빌드, lint(0 warnings/errors), typecheck, 단위 21개, AI/입력/Webhook API 17개, AI E2E 6개(총 44개)가 통과했습니다. 실행은 테스트 컨테이너의 `npm run lint`, `npm run typecheck`, `npm test`, `node --test --test-concurrency=1 tests/api/ai.test.mjs tests/api/mcp-input.test.mjs tests/api/webhook-response.test.mjs`, `npx playwright test --config tests/playwright.config.ts tests/e2e/ai.spec.ts`입니다. 같은 사용자의 이전 제안이 다른 실행을 복구하지 않는지, 이미지 확인 누락 시 적용 차단, 새로고침 뒤 안내·미리보기·실제 적용을 검증했습니다. API 검사 파일은 테스트 시각 이동 수정본을 읽기 전용 마운트해 실행했습니다. 전체 스위트 및 외부 실모델 재실행은 하지 않았습니다.
+- 활성 AI 요청 0건 확인 후 개발 API를 빌드하고 API/Nginx를 재생성했습니다. API/Nginx/DB healthy와 Nginx의 health 응답 ok를 확인하고 테스트 환경을 정리했습니다. 이전 API 이미지는 `jjapgma-api:pre-empty-reply-20260918`로 보존했습니다. 이번에 확인한 개발 실행 한 건만 기존 배포 코드의 이미지 확인 선행 순서·실패 로그·사용자 빈 출력·DB의 제안/소유권 일치를 근거로 completed와 설명 누락 안내로 복구했습니다. 사용량의 실행 상태만 맞추고 토큰·집계 완료 여부·기존 완료 시각은 보존했습니다. `ai.recover_empty_reply` 감사 기록을 추가했으며 제안은 pending으로 유지했습니다. 전체 과거 실패에 대한 자동 복구는 없습니다. 필요 시 해당 실행/사용량 상태를 failed와 이전 missing_reply 안내로 되돌릴 수 있으며 페이지에는 영향이 없습니다.
+- 운영 배포와 외부 n8n 설정 변경은 수행하지 않았습니다. 이번 서버 보완에 별도 System Message/Respond to Webhook 변경은 필요하지 않습니다. 기존 staged `compose.build.yaml`과 앞선 작업은 보존했습니다.
+
+## 2026-09-18 n8n Agent 출력 파싱 오류 조사
+
+- 사용자가 Model 설정을 `openrouter/free`로 확인했습니다. 공식 문서상 필요한 기능으로 후보를 거른 뒤 무료 모델을 무작위 선택하는 라우터입니다. 실제 두 호출의 선택 모델/제공자·오류 상세는 미확인입니다. 이미지+도구 호출을 지원하는 고정 무료 모델로 비교하는 방안을 안내하며, 모델 교체나 외부 n8n 수정은 수행하지 않았습니다.
+- 후속 Chat Model 로그에서 첫 호출 tool_calls(입력 7157/출력 421), 두 번째 error(입력 16312/출력 3002, 빈 text)를 확인했습니다. OpenRouter 공식 오류 계약상 생성 중 오류도 finish_reason=error로 전달됩니다. 모델/제공자·원래 오류 본문은 미제공이며 토큰 한도나 특정 공급자 장애로 단정하지 않습니다. 현재 모델명/출력 한도와 해당 요청의 OpenRouter 오류 상세 확인이 남아 있습니다.
+- 사용자가 n8n 2.38.7 / AI Agent 3.1의 `wrapLangChainParserError → ToolsAgent/V3/helpers/executeBatch` 스택을 제공했습니다. 공개 n8n/LangChain 소스에서 도구 인자 JSON 파싱 예외도 같은 메시지로 감싸질 수 있음을 확인했습니다. 별도 Structured Output Parser나 Respond to Webhook 설정이 원인이라고 단정했던 안내를 정정했습니다. 설치 버전과 공개 master의 정확한 일치는 미확인입니다.
+- 최근 개발 로그는 get_design_context 53ms 성공 뒤 생성 도구 호출 없이 219156ms에 n8n HTTP 500을 기록했습니다. 마지막 Chat Model의 tool_calls/arguments와 finish_reason을 확인해야 잘못된 JSON·출력 잘림·최종 답변 파싱을 구분할 수 있습니다. 출력 형식 옵션은 이미 OFF 확인 기록이 있어 반복 변경하지 않습니다. 이번에는 안내 문서만 수정했고 diff 검사를 통과했습니다. 앱 코드·배포·외부 n8n 설정 변경과 실행 테스트는 하지 않았습니다.
+
+## 2026-09-17 AI 입력 보정·일반 CSS·캡처 콘텐츠 처리
+
+- 개발 재현에서 create_page 입력 검증이 두 번 실패한 뒤 앱의 300초 제한에 도달했습니다. 도구 처리 자체는 각각 4ms였고 n8n은 앱 종료 뒤에도 실행을 계속했습니다. 운영 이력을 확인한 것은 아닙니다. 숫자 크기·style에 잘못 들어간 props·반응형 표기를 MCP 입구에서 명확한 경우에만 정리하고, 반복 오류를 그룹화해 전체 작업 한도와 다른 오류가 가려지지 않게 했습니다. 권한·트리·앱 전용 설정 검증은 유지합니다.
+- 사용자의 일반 CSS 허용 요청에 따라 UI Spec에 선택적 style.css를 추가하고 기존 props.customCss도 AI 작업에 허용했습니다. borderBottomWidth/Color, calc 크기, padding 축약형, flex 등은 CSS로 보존합니다. Inspector 고급 편집·저장·반응형·미리보기·HTML/Storybook ZIP을 연결했습니다. CSS 병합 시 선언 순서를 유지하며 모바일 개별 속성을 제거했을 때 기본 축약 속성이 복원되도록 렌더러를 수정했습니다. DB 마이그레이션은 없고 API/웹은 같은 CSS 지원 버전으로 사용해야 합니다.
+- 사용자가 지정한 다운로드 폴더의 캡처를 확인했습니다. 카드 썸네일 속 로봇·다이어그램과 본문 콘텐츠를 UI 자체와 구분하도록 System Message 및 MCP operationGuide를 갱신했습니다. 버튼·메뉴·입력 라벨과 배치/타이포그래피는 유지하고 사진·게시물 제목·본문·작성자·날짜·수치 등은 같은 비율/비슷한 길이의 예시로 대체합니다. 작은 글자 복원·원문 검색·썸네일 도형 분해를 피하며 특정 원문·자산 사용을 명시한 요청은 우선합니다. 이는 모델 지침이며 실제 자동 구분 품질이나 이미지 콘텐츠가 지연 원인이었다는 사실을 검증한 것은 아닙니다.
+- Docker `compose.test.yaml build`와 컨테이너의 lint(경고/오류 0), typecheck, 단위 21개, AI/입력 API 15개, E2E 12개, Story 4개(총 52개)가 통과했습니다. API: `node --test --test-concurrency=1 tests/api/ai.test.mjs tests/api/mcp-input.test.mjs`; E2E: `npx playwright test --config tests/playwright.config.ts tests/e2e/ai.spec.ts tests/e2e/export.spec.ts tests/e2e/inspector.spec.ts tests/e2e/storybook-export.spec.ts`; Story: `npx playwright test --config tests/storybook.config.ts tests/stories/inspector.spec.ts`. 실제 다운로드한 HTML/Storybook ZIP에서 CSS·모바일 상속을 확인했습니다. 최초 검사에서 명세 크기 한도와 모바일→데스크톱 테두리 복원 실패를 발견해 수정하고 재검증했습니다. 전체 테스트 스위트를 실행한 것은 아닙니다.
+- 개발 API/웹 이미지를 빌드하고 실행 중인 AI 요청 0개 확인 후 `docker compose -f compose.dev.yaml up -d --no-deps --force-recreate --wait api nginx`로 반영했습니다. API/Nginx/DB healthy 및 Nginx의 `/api/health` 응답 ok를 확인했습니다. 이전 개발 이미지는 API/Nginx 각각 `pre-css-fallback-20260917` 태그로 보존했습니다. 새 CSS 문서가 저장된 뒤 구버전으로 롤백하면 이를 처리하지 못하므로 데이터 호환성을 먼저 확인해야 합니다. 앞선 대화 닫기 010 마이그레이션은 개발에 적용된 상태입니다. 테스트 환경은 정리했고 사용자 staged `compose.build.yaml`은 보존했습니다.
+- 운영 배포와 외부 n8n 수정은 수행하지 않았습니다. 사용자는 AI Agent의 System Message를 `infra/n8n/system-prompt.txt` 전체로 교체하고 저장·게시해야 합니다. 그 뒤 실제 이미지→UI 요청의 콘텐츠 구분/제안/응답 시간을 확인해야 합니다. 앱의 5분 제한을 늘리지 않았으며 시간 초과가 완전히 해결됐다고 판단하지 않습니다. 기존 외부 AI/file-service 계약을 유지하고 입력 보정·CSS 저장/렌더링은 앱이 담당합니다.
+
+## 2026-09-17 AI 대화 닫기·이미지 보존 분류·범용 아이콘
+
+- AI 대화 선택 옆 X 버튼으로 본인 대화를 닫고 새 대화로 전환합니다. 마지막 대화도 닫을 수 있으며 새로고침 후에도 제외 상태를 유지합니다. 응답 진행 중 닫기를 막고 세션/CSRF·프로젝트·작성자 권한을 검사합니다. `010_ai_thread_close.sql`의 `closed_at`만 갱신해 실행·제안·사용량 기록을 보존합니다. 이전 앱으로 되돌리면 닫힌 대화가 다시 표시됩니다.
+- 사용자 요청을 file-service 지침의 보존 분류 예외로 적용했습니다. AI 참고 이미지의 multipart `category=month`를 브라우저에서 서버 프록시와 외부 서비스까지 전달합니다. 생략 또는 `month`만 허용하고 일반 파일과 기존 업로드는 그대로 둡니다. 한 달 뒤 삭제는 외부 책임이며 실제 만료 삭제를 검증한 것은 아닙니다. 신규 환경변수는 없습니다.
+- 공통 아이콘 목록에 공유·내보내기·업로드·첨부·문서·사용자·보안·정렬·필터·상태·결제 등 41개를 추가했습니다. 버튼·메뉴·표·내보내기가 같은 목록과 렌더러를 사용합니다. 공유/내보내기 Story와 검색·실제 렌더링·저장 후 재접속 검사를 갱신했습니다.
+- Docker 앱/Storybook 빌드, lint(경고/오류 0), typecheck, 단위 21개, 관련 API 15개, E2E 8개, Story 9개가 통과했습니다. 실행: `docker compose -f compose.test.yaml build`, 테스트 컨테이너의 `npm run lint`, `npm run typecheck`, `npm test`, `node --test --test-concurrency=1 tests/api/ai.test.mjs tests/api/files.test.mjs`, `npm run test:e2e -- ai.spec.ts inspector.spec.ts`, `npm run test:stories -- chat.spec.ts inspector.spec.ts`. 첫 E2E의 테스트 계정 조회 오류를 수정하고 수정 파일을 읽기 전용으로 마운트해 `ai.spec.ts -g 'chat close removes'`를 재실행해 통과했습니다. 전체 회귀 스위트는 이번에 실행하지 않았습니다.
+- 검증은 격리된 DB·외부 서비스 fixture 기준입니다. 개발/운영 반영과 실제 외부 업로드는 수행하지 않았습니다. 반영 시 010 마이그레이션이 필요합니다. 기존 사용자 변경 `compose.build.yaml`은 보존했습니다.
 
 ## 2026-09-16 실제 Storybook 프로젝트 내보내기
 

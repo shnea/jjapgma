@@ -73,6 +73,8 @@ AI 공식 endpoint는 https://n8n.shnea.kr/webhook/jjapgma. 제공 지침의 초
 
 ## 운영 전 남은 설정
 
+2026-09-17 사용자 요청: AI 채팅 참고 이미지는 `category=month`를 외부 파일 서비스에 전달해 한 달 보관 정책을 선택합니다. 일반 편집기 업로드와 기존 파일에는 적용하지 않습니다. 대화 닫기는 앱 DB의 `010_ai_thread_close.sql`로 보존 상태를 관리합니다. 상세 계약은 [파일](FILE_INTEGRATION.md), [AI 채팅](AI_MCP.md)을 따릅니다.
+
 페이지 복원·공식/개인 템플릿·화면 테마는 해당 외부 구현 지침이 없어 앱의 공통 UI Spec과 PostgreSQL에서 제공합니다. AI 지침의 향후 MCP 템플릿/테마 조회와 현재 구현을 구분합니다. 새 환경변수 없이 005·006 마이그레이션으로 적용합니다. 개인 템플릿의 파일 본문/미리보기는 기존 file-service 계약을 유지하고 앱은 개인 소유권과 파일 참조를 관리합니다. [사용법·데이터 보존](PAGE_LIBRARY.md).
 
 - 실제 refresh/logout 왕복 검증. 로그인 성공은 사용자 확인 완료.

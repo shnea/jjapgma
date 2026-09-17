@@ -9,6 +9,32 @@ import {
   removeNode,
   effectiveStyle,
 } from './index.js';
+test('mobile layout defaults are derived without changing desktop data or explicit overrides', () => {
+  const grid = createNode('grid');
+  grid.style = { gridColumns: 5, minWidth: '600px' };
+  const before = structuredClone(grid);
+  assert.equal(effectiveStyle(grid, 'mobile').gridColumns, 1);
+  assert.equal(effectiveStyle(grid, 'mobile').width, '100%');
+  assert.equal(effectiveStyle(grid, 'mobile').minWidth, '0px');
+  assert.deepEqual(grid, before);
+  assert.equal(effectiveStyle(grid, 'desktop').gridColumns, 5);
+  grid.responsive.mobile = { gridColumns: 2, width: '80%', minWidth: '100px' };
+  assert.equal(effectiveStyle(grid, 'mobile').gridColumns, 2);
+  assert.equal(effectiveStyle(grid, 'mobile').width, '80%');
+  assert.equal(effectiveStyle(grid, 'mobile').minWidth, '100px');
+  const row = createNode('container');
+  row.style = { direction: 'row', align: 'center' };
+  row.children = [createNode('image'), createNode('container')];
+  assert.equal(effectiveStyle(row, 'mobile').direction, 'column');
+  assert.equal(effectiveStyle(row, 'mobile').align, 'stretch');
+  row.responsive.mobile = { direction: 'row', wrap: false };
+  assert.equal(effectiveStyle(row, 'mobile').direction, 'row');
+  assert.equal(effectiveStyle(row, 'mobile').wrap, false);
+  row.responsive.mobile = {};
+  row.style.overflowX = 'auto';
+  assert.equal(effectiveStyle(row, 'mobile').direction, 'row');
+  assert.equal(effectiveStyle(row, 'mobile').wrap, undefined);
+});
 test('tree edits are immutable and prevent invalid nesting/cycles', () => {
   const spec = createSpec();
   const card = createNode('card');

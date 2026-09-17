@@ -4,6 +4,10 @@
 
 디자인 오른쪽 AI 탭에서 사용자별 프로젝트 대화를 저장한다. 현재 페이지·선택 요소·반응형 화면·저장 revision을 전달한다. 저장되지 않은 편집이 있으면 먼저 저장한다. 질문과 조회는 VIEWER도 가능하며 변경 제안과 적용은 OWNER/EDITOR만 가능하다.
 
+대화 선택 옆 X 버튼으로 현재 대화를 닫으면 새 대화로 이동하고 새로고침 후에도 닫힌 대화는 목록에서 제외한다. 마지막 대화도 닫을 수 있다. 본인 대화만 닫을 수 있으며 응답 진행 중에는 닫기를 막는다. `010_ai_thread_close.sql`의 `closed_at`으로 상태를 저장하고 대화·실행·제안·사용량 기록은 보존한다. 닫힌 대화로 새 메시지를 보내면 404를 반환한다. 롤백 시 기존 앱은 이 열을 무시하므로 닫힌 대화가 다시 목록에 표시된다.
+
+AI 참고 이미지 업로드에는 사용자 요청에 따라 multipart `category=month`를 외부 파일 서비스까지 전달한다. 한 달 뒤 파일 삭제는 외부 보존 정책에 맡기며 기존 첨부에는 소급 적용하지 않는다. 일반 편집기 파일은 기존 기본 보존 정책을 유지한다.
+
 답변은 CommonMark/GFM Markdown(제목·목록·표·코드·인용·링크·체크 목록·취소선)으로 표시한다. raw HTML/실행 스크립트는 허용하지 않는다. 내 메시지는 오른쪽, 답변은 왼쪽이며 브라우저 시간대로 전송/응답 시각을 표시한다. 상단 문맥과 하단 입력창 사이의 대화·제안 영역만 스크롤하고, 과거 메시지를 읽는 동안 자동 스크롤을 강제하지 않는다. Enter 전송, Shift+Enter/Ctrl+Enter 줄바꿈, 한글 IME 조합 중 전송 방지를 공통 Composer로 처리한다.
 
 참고 이미지 1장(PNG/JPEG/WebP/GIF)은 브라우저에서 긴 변 최대 1,024px·200 KB 이하로 줄인 뒤 기존 file-service multipart proxy로 업로드한다. JPEG 품질 70%에서 필요시 품질/해상도를 단계적으로 낮추고 비율을 유지하며 확대하지 않는다. 이미 기준 이내인 정지 이미지는 그대로 보낸다. 변환 시 투명 배경은 흰색, GIF는 첫 프레임을 사용한다. 원본은 최대 20 MB·4천만 픽셀·한 변 16,384px까지 받으며 업로드 전에 실제 디코딩을 검사한다. 실패 시 원본을 대신 업로드하지 않고 오류를 표시한다. 첨부 영역에 변환 전후 용량·최종 해상도를 표시한다.
@@ -33,9 +37,13 @@ OWNER/EDITOR만 업로드/첨부할 수 있고, 서버는 project_files에 연�
 
 새 화면은 `get_design_context({types:[...]})`로 필요한 요소의 해당 속성과 기본 노드, 공통 스타일 한 벌, 간결한 요소/템플릿 목록을 받습니다. 12종 조회 제한을 제거하여 등록된 모든 종류를 한 번에 조회할 수 있으며 중복은 한 번만 반환합니다. 응답량은 필요한 종류 선택과 공통 스타일 중복 제거로 줄입니다. types 생략 시 container/navbar/heading/text/button/card를 제공합니다. 알 수 없는 종류와 빈 배열은 오류이며 전체 HTTP 요청 크기 제한은 유지합니다. 기존 화면 수정만 pageId를 지정해 같은 권한 검사 후 명세·revision을 함께 받습니다. 새 화면에는 현재 페이지 전체 조회가 필요하지 않습니다. 조회 후 전체 operations를 한 번의 create_page로 묶습니다. 컴포넌트 단건 조회도 해당 요소 속성만 반환하고 Registry는 이름·분류·자식 허용 여부만 반환합니다. 기존 Registry의 properties 편집 메타데이터 대신 design context/단건 schema를 사용합니다.
 
-쓰기 도구의 공개 입력 명세는 작업 구조와 props/style 객체로 간결하게 표시하며, 실제 실행은 기존 patchSchema 전체 검증을 유지합니다. 허용 값은 조회한 요소/스타일 명세를 따릅니다. get_design_context의 operationGuide에는 add/update/move/remove/template와 모바일 수정 예시를 함께 제공합니다. 추가는 op=add와 type/id/parentId가 필수이며 기존 루트 page-root는 update합니다. create/componentType, CSS 문자열 padding, flex는 허용하지 않습니다.
+쓰기 도구의 공개 입력 명세는 작업 구조와 props/style 객체로 간결하게 표시하며, 실제 실행은 patchSchema 전체 검증을 유지합니다. get_design_context의 operationGuide에는 add/update/move/remove/template, 추가 CSS와 모바일 수정 예시를 함께 제공합니다. 추가는 op=add와 type/id/parentId가 필수이며 기존 루트 page-root는 update합니다. create/componentType은 허용하지 않습니다. 일반 CSS의 padding 축약형·flex 등은 style.css로 전달합니다.
 
-잘못된 입력에는 최대 10개 오류 경로·코드, 기대 타입/허용 enum, 최소·최대 범위와 경계 포함 여부를 반환합니다. 지원하지 않는 필드는 unexpectedKeys에 최대 10개·각 80자까지 이름을 반환하고 필드 값 원문은 넣지 않습니다. 잘못된 op에는 허용 작업 이름을 반환합니다. create_page/apply_ui_patch의 스키마 실패에는 같은 operationGuide를 반환하므로 이미 받은 명세를 반복 조회할 필요가 없습니다. 실패는 isError=true이며 변경을 저장하지 않습니다. mcp_tool_finished 로그에는 도구명·실행/연결 ID·성공 여부·소요 시간과 스키마 실패 시 validationCodes만 남깁니다. 인자·오류 경로·사용자 문구는 로그에 기록하지 않습니다. 서버가 잘못된 부모 관계나 지원하지 않는 CSS를 추측해 자동 변환하지 않습니다.
+MCP의 create_page/apply_ui_patch 입력에서 의미가 명확한 표기를 먼저 정리합니다. 6종 크기(width/height/minWidth/maxWidth/minHeight/maxHeight)의 0~9999 정수는 px 문자열로, style 안의 기존 props 전용 속성은 같은 이름의 props가 없고 breakpoint가 없는 경우에만 props로 이동합니다. style.responsive.mobile/tablet는 대상 요소의 별도 update 작업으로 변환합니다. 일반 CSS 속성(borderBottomWidth/Color 등)과 기본 설정으로 표현할 수 없는 CSS 값(calc 크기, padding 축약형 등)은 style.css로 옮겨 보존합니다. 변환 후 patchSchema·명세·권한 검사와 작업 한도 100개를 적용합니다. 중복된 입력·잘못된 앱 전용 설정·반응형 구조는 거부합니다. 정상 제안 응답의 inputAdjustments에 pixelDimensions/movedProps/responsiveUpdates/cssProperties 변환 개수를 반환합니다.
+
+UI Spec의 선택적 style.css는 일반 CSS 선언 객체입니다. camelCase/kebab-case와 CSS 변수를 지원하며 속성별 허용 목록은 없습니다. 속성명 최대 100자, 값은 최대 2000자 문자열 또는 유한 숫자, 객체당 최대 100개입니다. 숫자는 브라우저가 단위 없이 허용하면 그대로, 그렇지 않으면 px를 붙여 적용하므로 명시적 단위가 필요하면 문자열을 사용합니다. 선택자·중첩 객체·실행 코드는 받을 수 없습니다. 기존 props.customCss 선언 문자열도 AI 작업에서 허용합니다. 렌더러는 기본 스타일, customCss, style.css 순서로 적용하고 브라우저가 CSS를 해석합니다. CSS는 요소 래퍼에 적용됩니다. 모바일/tablet와 update 작업은 CSS 속성별로 병합하며 빈 문자열로 선언을 해제할 수 있습니다. 나중에 지정한 속성은 상속한 축약 속성 뒤에 적용하며 기기 전환 시 기본 스타일을 복원합니다. 저장·미리보기·HTML/Storybook 내보내기는 같은 명세와 렌더러를 사용합니다.
+
+잘못된 입력은 같은 경로의 배열 인덱스별 오류를 묶어 최대 20개 오류 그룹과 occurrences, 전체 issueCount, 생략한 omittedIssueGroups를 반환합니다. 배열 전체 한도 오류를 먼저 표시하며 경로는 표기 정리 후 기준입니다. 기대 타입/허용 enum, 최소·최대 범위와 경계 포함 여부를 제공하고, 지원하지 않는 필드는 unexpectedKeys에 최대 10개·각 80자까지 이름만 반환합니다. 입력 값 원문은 넣지 않습니다. 잘못된 op에는 허용 작업 이름을 반환합니다. create_page/apply_ui_patch의 스키마 실패에는 같은 operationGuide를 반환하므로 이미 받은 명세를 반복 조회할 필요가 없습니다. 실패는 isError=true이며 변경을 저장하지 않습니다. mcp_tool_finished 로그에는 도구명·실행/연결 ID·성공 여부·소요 시간과 스키마 실패 시 validationCodes만 남깁니다. 인자·오류 경로·사용자 문구는 로그에 기록하지 않습니다. 서버가 잘못된 부모 관계를 추측해 바꾸지는 않습니다.
 
 변경 제안: `apply_ui_patch`, `create_page`, `rename_page`. 읽기 연결에는 노출하지 않으며 직접 호출도 거절한다. `apply_ui_patch`는 추가·속성/스타일 수정·기기별 스타일·이동·삭제·공식 템플릿 삽입을 최대 100개 작업으로 받는다. **도구 이름과 관계없이 즉시 저장하는 기능이 아니라 미리보기 제안 생성이다.** n8n과 외부 에이전트 모두 AI 탭에서 사용자 적용을 거친다.
 
@@ -55,6 +63,7 @@ AI 적용 버전은 `page_revisions.source=ai`, `proposal_id`로 대화·제안�
 
 - `GET/POST /api/projects/:id/mcp-connections`, `DELETE /api/projects/:id/mcp-connections/:connectionId`
 - `GET/POST /api/projects/:id/chat`: POST는 실행을 접수하고 `runId/threadId`를 반환한다. 화면은 실행 결과를 조회한다.
+- `DELETE /api/projects/:id/chat/:threadId`: 본인 대화를 닫는다. 진행 중이면 409, 다른 사용자/프로젝트이면 404이며 이미 닫힌 대화에는 성공을 반환한다.
 - `GET /api/projects/:id/proposals`, `GET /api/proposals/:id`
 - `POST /api/proposals/:id/apply`, `DELETE /api/proposals/:id`
 
@@ -65,6 +74,8 @@ AI 적용 버전은 `page_revisions.source=ai`, `proposal_id`로 대화·제안�
 008 마이그레이션은 `completed_at`만 추가한다. 기존 실행의 완료 시각은 알 수 없어 null로 유지하고 새 성공·실패·시간 초과 실행부터 기록한다. 조회 응답에는 created_at/completed_at/image가 포함된다. 환경변수 추가는 없다.
 
 AI는 사용자당 한 작업, 분당 최대 6회, 상류 timeout 5분(300초), 실행/MCP 유효시간 5분 30초(준비·저장 여유 포함), 응답 최대 256KB/본문 30,000자로 제한한다. 자동 재시도나 공급자 우회는 없다. SIGTERM/SIGINT 정상 종료 시 새 채팅 접수를 막고 이 프로세스의 진행 중 요청을 중단·실패로 기록한 뒤 DB를 닫는다. 다른 API 프로세스의 실행은 변경하지 않는다. 강제 종료·정전처럼 종료 처리를 실행하지 못한 작업은 만료 후 조회 시 실패로 정리한다. n8n 외부 워크플로 자체 취소를 뜻하지 않으며 종료된 실행의 MCP 권한은 차단된다. 편집 화면은 15초 간격으로 외부 저장 버전을 확인하고 충돌 안내를 표시한다.
+
+HTTP 200 JSON의 답변이 빈 문자열/공백이어도 같은 실행·프로젝트·사용자의 pending 제안이 DB에 있으면 실행을 완료하고 “변경 제안은 생성됐지만 AI 설명이 비어 있습니다”라고 표시한다. 이미지 요청은 동일 imageFileId 확인을 먼저 통과해야 한다. 제안 미리보기·사용자 적용만 허용하며 화면을 자동 적용하거나 모델 답변을 생성하지 않는다. 저장된 제안이 없으면 empty_reply로 실패한다. reply 필드 누락/잘못된 타입, HTTP·JSON·명시적 워크플로 오류, 이미지 확인 누락은 복구 대상이 아니다. 기존 실패 이력을 일괄 변경하지 않는다. ai_reply_recovered 로그에는 실행 ID와 empty_reply_with_proposal 사유만 남긴다.
 
 ## 외부 설정과 검증
 

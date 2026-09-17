@@ -182,3 +182,21 @@
 .render-button > .render-content {
   width: 100%;
 }
+
+/* Canvas device selection also works inside a desktop browser and exported pages. */
+.render-node[data-breakpoint='mobile'] {
+  overflow-wrap: anywhere;
+}
+.render-node[data-breakpoint='mobile'] .render-content {
+  min-width: 0;
+  max-width: 100%;
+}
+.render-button[data-breakpoint='mobile'] .element-button {
+  max-width: 100%;
+  white-space: normal;
+}
+.render-button[data-breakpoint='mobile'] .button-text {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

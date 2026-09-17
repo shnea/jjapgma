@@ -48,6 +48,81 @@ async function connect(projectId, token) {
   );
   return client;
 }
+test('chat closing persists, preserves records and enforces ownership, CSRF and running state', async () => {
+  const owner = await identity(),
+    viewer = await identity(),
+    stranger = await identity();
+  const project = await (await request('/projects', owner, 'POST', { name: '대화 닫기' })).json();
+  const page = await (
+    await request(`/projects/${project.id}/pages`, owner, 'POST', { name: '원본' })
+  ).json();
+  await db.query("INSERT INTO members VALUES($1,$2,'VIEWER')", [project.id, viewer.id]);
+  const threadId = randomUUID(),
+    otherThread = randomUUID(),
+    runId = randomUUID();
+  for (const id of [threadId, otherThread])
+    await db.query('INSERT INTO ai_threads(id,project_id,user_id,title) VALUES($1,$2,$3,$4)', [
+      id,
+      project.id,
+      owner.id,
+      '대화',
+    ]);
+  await db.query(
+    "INSERT INTO ai_runs(id,thread_id,project_id,user_id,page_id,context,prompt,reply,status,expires_at) VALUES($1,$2,$3,$4,$5,'{}','질문','답변','running',now()+interval '1 minute')",
+    [runId, threadId, project.id, owner.id, page.id],
+  );
+  const path = `/projects/${project.id}/chat/${threadId}`;
+  assert.equal((await request(path, { token: '', csrf: '' }, 'DELETE')).status, 401);
+  assert.equal((await request(path, { ...owner, csrf: '' }, 'DELETE')).status, 403);
+  assert.equal((await request(path, viewer, 'DELETE')).status, 404);
+  assert.equal((await request(path, stranger, 'DELETE')).status, 404);
+  const otherProject = await (
+    await request('/projects', owner, 'POST', { name: '다른 프로젝트' })
+  ).json();
+  assert.equal(
+    (await request(`/projects/${otherProject.id}/chat/${threadId}`, owner, 'DELETE')).status,
+    404,
+  );
+  assert.equal((await request(path, owner, 'DELETE')).status, 409);
+  await db.query("UPDATE ai_runs SET status='completed',completed_at=now() WHERE id=$1", [runId]);
+  assert.equal((await request(path, owner, 'DELETE')).status, 200);
+  assert.equal((await request(path, owner, 'DELETE')).status, 200);
+  const history = await (await request(`/projects/${project.id}/chat`, owner)).json();
+  assert.deepEqual(
+    history.threads.map((t) => t.id),
+    [otherThread],
+  );
+  assert.equal(history.runs.length, 0);
+  assert.ok(
+    (await db.query('SELECT closed_at FROM ai_threads WHERE id=$1', [threadId])).rows[0].closed_at,
+  );
+  assert.equal((await db.query('SELECT id FROM ai_runs WHERE id=$1', [runId])).rowCount, 1);
+  assert.equal(
+    (
+      await request(`/projects/${project.id}/chat`, owner, 'POST', {
+        threadId,
+        pageId: page.id,
+        message: '닫힌 대화',
+        currentRevision: 1,
+        selectedNodeIds: [],
+        currentBreakpoint: 'desktop',
+      })
+    ).status,
+    404,
+  );
+  const viewerThread = randomUUID();
+  await db.query('INSERT INTO ai_threads(id,project_id,user_id,title) VALUES($1,$2,$3,$4)', [
+    viewerThread,
+    project.id,
+    viewer.id,
+    '조회 대화',
+  ]);
+  assert.equal(
+    (await request(`/projects/${project.id}/chat/${viewerThread}`, viewer, 'DELETE')).status,
+    200,
+  );
+});
+
 test('project MCP scopes, structured proposals, revisions, idempotency and revocation', async () => {
   const owner = await identity(),
     viewer = await identity(),
@@ -188,7 +263,7 @@ test('MCP batches only relevant design schemas and builds a responsive main scre
     assert.equal(context.components.container.node.type, 'container');
     assert.equal(context.components.button.props.properties.table, undefined);
     assert.equal(context.components.button.props.properties.chatMessages, undefined);
-    assert.equal(context.components.button.props.properties.customCss, undefined);
+    assert.ok(context.components.button.props.properties.customCss);
     assert.ok(context.components.button.props.properties.overlayAction);
     assert.ok(context.components.navbar.props.properties.items);
     assert.ok(context.style.properties.direction);
@@ -267,7 +342,7 @@ test('MCP batches only relevant design schemas and builds a responsive main scre
     assert.equal(saved.spec.root.children[0].children[0].props.text, '메인 화면');
     assert.equal(saved.spec.root.children[1].responsive.mobile.direction, 'column');
     assert.equal(saved.spec.root.children[1].children[0].responsive.mobile.width, '100%');
-    for (const style of [{ width: 'calc(100% - 10px)' }, { background: 'javascript:bad' }]) {
+    for (const style of [{ css: { color: 'javascript:bad' } }, { background: 'javascript:bad' }]) {
       const invalid = await client.callTool({
         name: 'create_page',
         arguments: {
@@ -286,7 +361,7 @@ test('MCP batches only relevant design schemas and builds a responsive main scre
           arguments: {
             name: '금지',
             summary: 'CSS 금지',
-            operations: [{ ...operations[0], props: { customCss: 'body{}' } }],
+            operations: [{ ...operations[0], props: { html: '<script>' } }],
           },
         })
       ).isError,
@@ -459,7 +534,10 @@ test('n8n MCP rejects malformed creation, explains the contract and accepts a co
         name: '새페이지',
         summary: '스타일 오류',
         operations: [
-          { ...error.operationGuide.examples.add, style: { padding: '0 24px', flex: 1 } },
+          {
+            ...error.operationGuide.examples.add,
+            style: { gridColumns: 'three', unsupportedObject: { value: 1 } },
+          },
         ],
       },
     });
@@ -467,11 +545,13 @@ test('n8n MCP rejects malformed creation, explains the contract and accepts a co
     const issues = JSON.parse(invalidStyle.content[0].text).issues;
     assert.ok(
       issues.some(
-        (i) => i.path.join('.') === 'operations.0.style.padding' && i.expected === 'number',
+        (i) => i.path.join('.') === 'operations.0.style.gridColumns' && i.expected === 'number',
       ),
     );
     assert.ok(
-      issues.some((i) => i.code === 'unrecognized_keys' && i.unexpectedKeys.includes('flex')),
+      issues.some(
+        (i) => i.code === 'unrecognized_keys' && i.unexpectedKeys.includes('unsupportedObject'),
+      ),
     );
     assert.ok(!JSON.stringify(issues).includes('0 24px'));
     const outOfRange = await client.callTool({
@@ -479,12 +559,12 @@ test('n8n MCP rejects malformed creation, explains the contract and accepts a co
       arguments: {
         name: '잘못된 여백',
         summary: '범위 검사',
-        operations: [{ ...error.operationGuide.examples.add, style: { padding: 999 } }],
+        operations: [{ ...error.operationGuide.examples.add, style: { gridColumns: 999 } }],
       },
     });
     assert.equal(outOfRange.isError, true);
     const rangeIssue = JSON.parse(outOfRange.content[0].text).issues[0];
-    assert.equal(rangeIssue.maximum, 160);
+    assert.equal(rangeIssue.maximum, 12);
     assert.equal(rangeIssue.inclusive, true);
     assert.equal(await countProposals(), 0);
     const missingParent = await client.callTool({
@@ -519,19 +599,38 @@ test('n8n MCP rejects malformed creation, explains the contract and accepts a co
             parentId: 'content',
             id: 'title',
             type: 'heading',
-            props: { text: '정상 생성' },
-            style: { paddingTop: 0, paddingRight: 24, paddingBottom: 0, paddingLeft: 24 },
+            style: {
+              text: '정상 생성',
+              height: 40,
+              borderBottomWidth: 2,
+              borderBottomStyle: 'solid',
+              borderBottomColor: '#123456',
+              width: 'calc(100% - 24px)',
+              paddingTop: 0,
+              paddingRight: 24,
+              paddingBottom: 0,
+              paddingLeft: 24,
+              responsive: { mobile: { fontSize: 18 } },
+            },
           },
           context.operationGuide.examples.mobile,
         ],
       },
     });
     assert.ok(!corrected.isError, JSON.stringify(corrected));
+    assert.deepEqual(JSON.parse(corrected.content[0].text).inputAdjustments, {
+      pixelDimensions: 1,
+      movedProps: 1,
+      responsiveUpdates: 1,
+      cssProperties: 4,
+    });
     assert.equal(await countProposals(), 1);
     const preview = await (
       await request(`/proposals/${JSON.parse(corrected.content[0].text).proposalId}`, owner)
     ).json();
     assert.equal(preview.spec.root.children[0].children[0].props.text, '정상 생성');
+    assert.equal(preview.spec.root.children[0].children[0].style.css['border-bottom-width'], 2);
+    assert.equal(preview.spec.root.children[0].children[0].style.css.width, 'calc(100% - 24px)');
     assert.equal(preview.spec.root.children[0].responsive.mobile.width, '100%');
     assert.equal(
       (await db.query('SELECT revision FROM pages WHERE id=$1', [page.id])).rows[0].revision,
@@ -985,6 +1084,104 @@ test('chat images use authorized file-service references and persist without raw
     !(await (await request(`/projects/${project.id}/proposals`, owner)).json()).some(
       (p) => p.id === hidden.id,
     ),
+  );
+});
+
+test("empty final answers preserve only this run's saved proposal and never bypass workflow or image failures", async () => {
+  const owner = await identity();
+  const project = await (
+    await request('/projects', owner, 'POST', { name: '빈 최종 답변' })
+  ).json();
+  const page = await (
+    await request(`/projects/${project.id}/pages`, owner, 'POST', { name: '원본' })
+  ).json();
+  const input = {
+    pageId: page.id,
+    currentRevision: 1,
+    selectedNodeIds: [],
+    currentBreakpoint: 'desktop',
+  };
+  const finish = async (message, imageFileId) => {
+    const sent = await (
+      await request(`/projects/${project.id}/chat`, owner, 'POST', {
+        ...input,
+        message,
+        ...(imageFileId ? { imageFileId } : {}),
+      })
+    ).json();
+    assert.ok(sent.runId);
+    for (let i = 0; i < 50; i++) {
+      const run = (await db.query('SELECT status,reply FROM ai_runs WHERE id=$1', [sent.runId]))
+        .rows[0];
+      if (run.status !== 'running') return { ...sent, ...run };
+      await delay(100);
+    }
+    assert.fail('run did not finish');
+  };
+  const saved = await finish('빈 답변 제안 테스트');
+  assert.equal(saved.status, 'completed');
+  assert.match(saved.reply, /제안은 생성됐지만 AI 설명이 비어/);
+  assert.equal((await (await request(`/pages/${page.id}`, owner)).json()).revision, 1);
+  const proposals = await (await request(`/projects/${project.id}/proposals`, owner)).json();
+  assert.ok(proposals.some((p) => p.run_id === saved.runId && p.status === 'pending'));
+  // An earlier proposal from the same project/user must not rescue another request.
+  for (const [message, expected] of [
+    ['제안 없는 빈 답변 테스트', /저장된 변경 제안도 없습니다/],
+    ['제안 후 응답 누락 테스트', /답변\(reply\)이 없습니다/],
+    ['제안 후 워크플로 오류 테스트', /AI 처리 오류/],
+    ['제안 후 HTTP 오류 테스트', /HTTP 503/],
+  ]) {
+    const failed = await finish(message);
+    assert.equal(failed.status, 'failed', message);
+    assert.match(failed.reply, expected);
+  }
+  // Move the completed first request outside the per-minute limit for the image cases.
+  await db.query("UPDATE ai_runs SET created_at=created_at-interval '1 minute' WHERE id=$1", [
+    saved.runId,
+  ]);
+  const form = new FormData();
+  form.set(
+    'file',
+    new Blob(
+      [
+        Buffer.from(
+          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+cOxkAAAAASUVORK5CYII=',
+          'base64',
+        ),
+      ],
+      { type: 'image/png' },
+    ),
+    'reference.png',
+  );
+  const upload = await fetch(`${base}/api/files/upload?projectId=${project.id}`, {
+    method: 'POST',
+    headers: { Origin: base, Cookie: `jjapgma_session=${owner.token}`, 'X-CSRF-Token': owner.csrf },
+    body: form,
+  });
+  assert.equal(upload.status, 201);
+  const file = await upload.json();
+  const confirmed = await finish('빈 답변 제안 테스트', file.fileId);
+  assert.equal(confirmed.status, 'completed');
+  const confirmedProposal = (
+    await (await request(`/projects/${project.id}/proposals`, owner)).json()
+  ).find((p) => p.run_id === confirmed.runId);
+  assert.ok(confirmedProposal);
+  const unconfirmed = await finish('빈 답변 이미지 확인 누락 테스트', file.fileId);
+  assert.equal(unconfirmed.status, 'failed');
+  assert.match(unconfirmed.reply, /이미지 전달 설정/);
+  const hidden = (
+    await db.query('SELECT id FROM ui_proposals WHERE run_id=$1', [unconfirmed.runId])
+  ).rows[0];
+  assert.ok(hidden);
+  assert.equal((await request(`/proposals/${hidden.id}/apply`, owner, 'POST')).status, 409);
+  assert.ok(
+    !(await (await request(`/projects/${project.id}/proposals`, owner)).json()).some(
+      (p) => p.id === hidden.id,
+    ),
+  );
+  assert.equal(
+    (await request(`/proposals/${confirmedProposal.id}/apply`, owner, 'POST')).status,
+    201,
   );
 });
 

@@ -33,6 +33,31 @@ const jsonRequest = (path, who, data) =>
     headers: { ...who.headers, 'Content-Type': 'application/json' },
     ...(data ? { body: JSON.stringify(data) } : {}),
   });
+test('file proxy forwards only supported retention categories to the external service', async () => {
+  const owner = await identity();
+  const project = await (await jsonRequest('/projects', owner, { name: '파일 보존' })).json();
+  for (const category of [undefined, 'month', 'forever', ['month', 'month']]) {
+    const body = new FormData();
+    body.set('file', new Blob(['hello'], { type: 'text/plain' }), 'retention.txt');
+    for (const value of Array.isArray(category) ? category : category ? [category] : [])
+      body.append('category', value);
+    const result = await fetch(`${base}/api/files/upload?projectId=${project.id}`, {
+      method: 'POST',
+      headers: owner.headers,
+      body,
+    });
+    if (category === 'forever' || Array.isArray(category)) {
+      assert.equal(result.status, 400);
+      continue;
+    }
+    assert.equal(result.status, 201, await result.clone().text());
+    const { fileId } = await result.json();
+    const upstream = await fetch(`http://file-service:8080/files/download/${fileId}`);
+    assert.equal(upstream.headers.get('X-Fixture-Category'), category ?? 'default');
+    assert.equal(await upstream.text(), 'hello');
+  }
+});
+
 test('file proxy enforces session, owner context, content checks and persisted project references', async () => {
   const owner = await identity(),
     viewer = await identity(),
@@ -158,9 +183,20 @@ test('file client uses multipart and keeps missing credentials, provider failure
     assert.equal(options.headers.Authorization, 'Bearer test-private');
     assert.equal(await options.body.get('file').text(), 'hello');
     assert.equal(options.headers['Content-Type'], undefined);
+    assert.equal(options.body.get('category'), null);
     return Response.json({ fileId: 14 }, { status: 201 });
   });
   assert.equal(await client.upload(file, 'note.txt'), '14');
+  const monthlyClient = new FileClient(
+    'https://file.shnea.kr',
+    'test-private',
+    async (_url, options) => {
+      assert.equal(options.body.get('category'), 'month');
+      assert.equal(await options.body.get('file').text(), 'hello');
+      return Response.json({ fileId: 15 }, { status: 201 });
+    },
+  );
+  assert.equal(await monthlyClient.upload(file, 'note.txt', 'month'), '15');
   for (const [upstream, status] of [
     [401, 503],
     [413, 413],

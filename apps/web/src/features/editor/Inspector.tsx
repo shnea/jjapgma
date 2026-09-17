@@ -1,5 +1,12 @@
 import { Copy, Trash2, ArrowUp, ArrowDown, RotateCcw } from 'lucide-react';
-import { registry, type UiNode, type Breakpoint, type PageTheme } from '@jjapgma/ui-spec';
+import {
+  registry,
+  effectiveStyle,
+  mergeCss,
+  type UiNode,
+  type Breakpoint,
+  type PageTheme,
+} from '@jjapgma/ui-spec';
 import { Button } from '../../components/ui/Button';
 import { ContentFields } from './controls/ContentFields';
 import { TableEditor } from './controls/TableEditor';
@@ -94,6 +101,27 @@ export function Inspector({
           <section>
             <details className="property-details">
               <summary>고급 스타일</summary>
+              {Object.entries(effectiveStyle(node, breakpoint).css ?? {}).map(
+                ([property, value]) => (
+                  <label key={property}>
+                    CSS {property}
+                    <input
+                      value={
+                        typeof value === 'number' && !CSS.supports(property, String(value))
+                          ? `${value}px`
+                          : String(value)
+                      }
+                      onChange={(event) =>
+                        onUpdate((n) => {
+                          const target =
+                            breakpoint === 'desktop' ? n.style : (n.responsive[breakpoint] ??= {});
+                          target.css = mergeCss(target.css, { [property]: event.target.value });
+                        })
+                      }
+                    />
+                  </label>
+                ),
+              )}
               <label>
                 커스텀 스타일 (CSS)
                 <textarea

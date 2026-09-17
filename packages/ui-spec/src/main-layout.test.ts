@@ -99,7 +99,7 @@ test('layout elements can be built without templates and reject unsafe navigatio
   assert.ok(validateSpec(next));
 });
 
-test('theme roles and independent responsive overflow survive patches while arbitrary CSS is rejected', () => {
+test('theme roles and responsive overflow survive patches while app color controls validate their values', () => {
   const spec = createTemplate('main');
   const node = spec.root.children[1].children[1];
   const next = applyUiPatch(spec, [

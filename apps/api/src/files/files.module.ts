@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Get,
   Inject,
@@ -17,6 +18,7 @@ import {
   type ExecutionContext,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { z } from 'zod';
 import type { Response } from 'express';
 import { AuthGuard, AuthModule } from '../auth/auth.module.js';
 import type { AuthRequest } from '../auth/auth.service.js';
@@ -55,17 +57,22 @@ class FilesController {
   @UseGuards(UploadGuard)
   @UseInterceptors(
     FileInterceptor('file', {
-      limits: { fileSize: config.UPLOAD_MAX_BYTES, files: 1, fields: 0, parts: 2 },
+      limits: { fileSize: config.UPLOAD_MAX_BYTES, files: 1, fields: 1, fieldSize: 32, parts: 3 },
     }),
   )
   async upload(
     @Req() request: AuthRequest,
     @Query('projectId') project: string,
+    @Body() body: unknown,
     @UploadedFile() file: UploadFile | undefined,
   ) {
     const projectId = parse(uuid, project);
+    const { category } = parse(
+      z.object({ category: z.literal('month').optional() }).strict(),
+      body,
+    );
     const metadata = validateUpload(file, config.UPLOAD_MAX_BYTES);
-    const fileId = await this.client.upload(file!, metadata.name);
+    const fileId = await this.client.upload(file!, metadata.name, category);
     await this.db.transaction(async (client) => {
       await projectAccess(client, projectId, request.identity.id, true);
       await client.query(

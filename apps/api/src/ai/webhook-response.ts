@@ -1,5 +1,12 @@
 type FailureCode =
-  'http' | 'empty' | 'too_large' | 'invalid_json' | 'missing_reply' | 'image_not_processed';
+  | 'http'
+  | 'empty'
+  | 'too_large'
+  | 'invalid_json'
+  | 'missing_reply'
+  | 'empty_reply'
+  | 'workflow_error'
+  | 'image_not_processed';
 
 export class WebhookResponseError extends Error {
   constructor(
@@ -15,11 +22,15 @@ export class WebhookResponseError extends Error {
             : `n8n이 오류를 반환했습니다(HTTP ${status}). n8n Executions에서 실패한 노드를 확인해 주세요.`
           : code === 'too_large'
             ? 'AI 응답이 허용 크기를 초과했습니다. 요청 범위를 줄여 주세요.'
-            : code === 'missing_reply'
-              ? 'n8n 응답에 답변(reply)이 없습니다. Respond to Webhook의 응답 설정을 확인해 주세요.'
-              : code === 'empty'
-                ? 'n8n이 빈 응답을 반환했습니다. Respond to Webhook의 연결과 응답 설정을 확인해 주세요.'
-                : 'n8n 응답이 JSON 형식이 아닙니다. Respond to Webhook의 응답 형식을 JSON으로 설정해 주세요.';
+            : code === 'empty_reply'
+              ? 'AI가 빈 답변을 반환했고 저장된 변경 제안도 없습니다. n8n의 마지막 Chat Model 출력과 종료 사유를 확인해 주세요.'
+              : code === 'workflow_error'
+                ? 'n8n이 AI 처리 오류를 반환했습니다. 마지막 Chat Model과 AI Agent의 실행 결과를 확인해 주세요.'
+                : code === 'missing_reply'
+                  ? 'n8n 응답에 답변(reply)이 없습니다. Respond to Webhook의 응답 설정을 확인해 주세요.'
+                  : code === 'empty'
+                    ? 'n8n이 빈 응답을 반환했습니다. Respond to Webhook의 연결과 응답 설정을 확인해 주세요.'
+                    : 'n8n 응답이 JSON 형식이 아닙니다. Respond to Webhook의 응답 형식을 JSON으로 설정해 주세요.';
     super(message);
   }
 }
@@ -61,10 +72,21 @@ export async function readWebhookReply(
   }
   const reply = data?.reply ?? data?.choices?.[0]?.message?.content;
   if (data?.usage !== undefined && reportUsage) await reportUsage(data.usage);
+  if (
+    (data?.error !== undefined && data.error !== null) ||
+    (Array.isArray(data?.choices) &&
+      data.choices.some(
+        (choice: { error?: unknown; finish_reason?: string }) =>
+          choice &&
+          ((choice.error !== undefined && choice.error !== null) ||
+            choice.finish_reason === 'error'),
+      ))
+  )
+    throw new WebhookResponseError('workflow_error', response.status);
   if (imageFileId && data?.imageFileId !== imageFileId)
     throw new WebhookResponseError('image_not_processed', response.status);
-  if (typeof reply !== 'string' || !reply.trim())
-    throw new WebhookResponseError('missing_reply', response.status);
+  if (typeof reply !== 'string') throw new WebhookResponseError('missing_reply', response.status);
+  if (!reply.trim()) throw new WebhookResponseError('empty_reply', response.status);
   if (reply.trim().length > 30000) throw new WebhookResponseError('too_large', response.status);
   return reply.trim();
 }

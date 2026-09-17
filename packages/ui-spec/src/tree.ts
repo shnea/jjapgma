@@ -1,5 +1,6 @@
 import { registry, legacyTypeAliases, type ComponentType } from './registry.js';
 import { nodeId } from './id.js';
+import { mergeCss } from './css.js';
 import { inputTypes, optionTypes } from './catalog/forms.js';
 import { horizontalTypes } from './catalog/layout.js';
 import { validateSpec, type UiNode, type UiSpec, type Breakpoint } from './schema.js';
@@ -191,6 +192,38 @@ export function findNode(root: UiNode, id: string): UiNode | undefined {
 export function effectiveStyle(node: UiNode, breakpoint: Breakpoint) {
   const override = node.responsive[breakpoint];
   const style = { ...node.style, ...override };
+  if (node.style.css || override?.css) style.css = mergeCss(node.style.css, override?.css);
+  if (breakpoint === 'mobile') {
+    const layout = ['container', 'card', 'grid'].includes(node.type);
+    const scrolling = ['auto', 'scroll'].includes(style.overflowX ?? style.overflow ?? '');
+    if (node.type === 'grid' && !scrolling) {
+      if (override?.gridColumns === undefined) style.gridColumns = 1;
+      if (override?.gridRows === undefined) style.gridRows = 1;
+    }
+    if (layout && !scrolling && override?.direction === undefined && style.direction === 'row') {
+      const sections = node.children.some((child) =>
+        ['container', 'card', 'grid', 'image', 'table', 'chart'].includes(child.type),
+      );
+      if (sections) style.direction = 'column';
+    }
+    if (layout && !scrolling && style.direction === 'row' && override?.wrap === undefined)
+      style.wrap = true;
+    if (
+      layout &&
+      override?.width === undefined &&
+      (!node.style.width || node.style.width === 'auto')
+    )
+      style.width = '100%';
+    if (override?.minWidth === undefined) style.minWidth = '0px';
+    if (node.style.maxWidth && node.style.maxWidth !== 'auto' && override?.maxWidth === undefined)
+      style.maxWidth = `min(100%, ${node.style.maxWidth})`;
+    if (
+      node.style.direction === 'row' &&
+      style.direction === 'column' &&
+      override?.align === undefined
+    )
+      style.align = 'stretch';
+  }
   // A row's bottom alignment must not become right alignment when stacked.
   // Explicit per-device alignment remains authoritative, including old saved pages.
   if (

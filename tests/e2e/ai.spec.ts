@@ -3,6 +3,40 @@ import { randomUUID, createHash } from 'node:crypto';
 import pg from 'pg';
 import { createSpec } from '@jjapgma/ui-spec';
 import { openSpec } from './helpers';
+test('chat close removes only the selected conversation and survives reconnecting', async ({
+  page,
+}) => {
+  const { initial } = await openSpec(page, createSpec(), '대화 닫기');
+  const db = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+  try {
+    const {
+      rows: [project],
+    } = await db.query("SELECT user_id FROM members WHERE project_id=$1 AND role='OWNER'", [
+      initial.project_id,
+    ]);
+    for (const title of ['첫 대화', '둘째 대화'])
+      await db.query('INSERT INTO ai_threads(id,project_id,user_id,title) VALUES($1,$2,$3,$4)', [
+        randomUUID(),
+        initial.project_id,
+        project.user_id,
+        title,
+      ]);
+  } finally {
+    await db.end();
+  }
+  await page.getByRole('button', { name: 'AI', exact: true }).click();
+  const picker = page.getByRole('combobox', { name: 'AI 대화 선택' });
+  await expect(picker.locator('option')).toHaveCount(3);
+  await picker.selectOption({ label: '첫 대화' });
+  await page.getByRole('button', { name: '현재 AI 대화 닫기' }).click();
+  await expect(picker.locator('option')).toHaveText(['새 대화', '둘째 대화']);
+  await page.reload();
+  await page.getByRole('button', { name: 'AI', exact: true }).click();
+  await expect(picker.locator('option')).toHaveText(['새 대화', '둘째 대화']);
+  await page.getByRole('button', { name: '현재 AI 대화 닫기' }).click();
+  await expect(picker.locator('option')).toHaveText(['새 대화']);
+});
+
 test('chat proposes through MCP, previews, applies one revision, supports undo and issues local connection', async ({
   page,
 }) => {
@@ -64,6 +98,30 @@ test('chat proposes through MCP, previews, applies one revision, supports undo a
   await expect(mcp.getByLabel('인증 토큰')).toHaveValue(/^jmcp_/);
   await mcp.getByRole('button', { name: '로컬 AI 에이전트 연결 폐기' }).click();
   await expect(mcp.getByText('폐기됨')).toBeVisible();
+});
+
+test('an empty final answer still shows the saved proposal for review and apply after reload', async ({
+  page,
+}) => {
+  await openSpec(page, createSpec(), '빈 설명의 제안');
+  await page.getByRole('button', { name: 'AI', exact: true }).click();
+  await page.getByLabel('AI에게 요청').fill('빈 답변 제안 테스트');
+  await page.getByRole('button', { name: '보내기', exact: true }).click();
+  await expect(page.getByText(/변경 제안은 생성됐지만 AI 설명이 비어 있습니다/)).toBeVisible({
+    timeout: 20000,
+  });
+  await page.reload();
+  await page.getByRole('button', { name: 'AI', exact: true }).click();
+  await expect(page.getByText(/변경 제안은 생성됐지만 AI 설명이 비어 있습니다/)).toBeVisible();
+  await page
+    .getByRole('region', { name: '화면 변경 제안' })
+    .getByRole('button', { name: '미리보기', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', { name: 'AI 변경 미리보기' });
+  await expect(dialog.getByRole('button', { name: 'AI 생성 버튼' })).toBeVisible();
+  await dialog.getByRole('button', { name: '변경 적용' }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator('[data-testid="node-button"]')).toHaveCount(1);
 });
 
 test('AI builds a new custom chat page without a template, previews its contents and preserves the original page', async ({

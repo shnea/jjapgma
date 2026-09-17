@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { styleSchema, patchSchema, type UiNode } from '@jjapgma/ui-spec';
 import { McpAccessService, type McpActor } from './mcp-access.service.js';
 import { ProposalsService } from './proposals.service.js';
+import { normalizeMcpInput, summarizeMcpIssues } from './mcp-input.js';
 import { createMcpTemplate, templateCatalog } from './template-context.js';
 import {
   componentCatalog,
@@ -214,7 +215,10 @@ export async function serveMcp(
       if (!tool) throw new Error('알 수 없는 도구입니다.');
       toolName = tool.name;
       await access.check(actor, tool.write);
-      const input = tool.schema.safeParse(request.params.arguments ?? {});
+      const normalized = ['create_page', 'apply_ui_patch'].includes(tool.name)
+        ? normalizeMcpInput(request.params.arguments ?? {})
+        : { input: request.params.arguments ?? {}, adjustments: undefined };
+      const input = tool.schema.safeParse(normalized.input);
       if (!input.success) {
         validationCodes = [...new Set(input.error.issues.map((issue) => issue.code))];
         return {
@@ -224,25 +228,8 @@ export async function serveMcp(
               type: 'text',
               text: JSON.stringify({
                 error:
-                  '입력 검증 실패로 변경을 저장하지 않았습니다. issues의 경로·기대 값·허용 범위를 보고 수정하세요. unexpectedKeys는 지원하지 않는 필드입니다. 이미 받은 명세를 반복 조회하거나 같은 인자를 재전송하지 마세요.',
-                issues: input.error.issues.slice(0, 10).map((issue) => ({
-                  path: issue.path,
-                  code: issue.code,
-                  ...(issue.code === 'invalid_type' ? { expected: issue.expected } : {}),
-                  ...(issue.code === 'invalid_value' ? { allowed: issue.values } : {}),
-                  ...(issue.code === 'too_big'
-                    ? { maximum: Number(issue.maximum), inclusive: issue.inclusive }
-                    : {}),
-                  ...(issue.code === 'too_small'
-                    ? { minimum: Number(issue.minimum), inclusive: issue.inclusive }
-                    : {}),
-                  ...(issue.code === 'unrecognized_keys'
-                    ? { unexpectedKeys: issue.keys.slice(0, 10).map((key) => key.slice(0, 80)) }
-                    : {}),
-                  ...(issue.code === 'invalid_union' && issue.path.at(-1) === 'op'
-                    ? { allowed: ['add', 'update', 'move', 'remove', 'template'] }
-                    : {}),
-                })),
+                  '입력 검증 실패로 변경을 저장하지 않았습니다. issues는 같은 경로의 배열 인덱스별 오류를 묶은 예시이며 occurrences는 발생 횟수입니다. 전체 operations에서 같은 오류를 함께 수정하세요. 경로는 입력 표기 정리 후 기준입니다. unexpectedKeys는 지원하지 않거나 중복된 필드입니다. 이미 받은 명세를 반복 조회하거나 같은 인자를 재전송하지 마세요.',
+                ...summarizeMcpIssues(input.error.issues),
                 ...(tool.name === 'create_page' || tool.name === 'apply_ui_patch'
                   ? { operationGuide }
                   : {}),
@@ -257,7 +244,20 @@ export async function serveMcp(
         [actor.userId, actor.projectId, `mcp.${tool.name}`, actor.runId ?? actor.connectionId],
       );
       outcome = 'ok';
-      return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+      const adjusted =
+        normalized.adjustments && Object.values(normalized.adjustments).some(Boolean);
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(
+              adjusted
+                ? { ...(result as object), inputAdjustments: normalized.adjustments }
+                : result,
+            ),
+          },
+        ],
+      };
     } catch (error) {
       return {
         isError: true,

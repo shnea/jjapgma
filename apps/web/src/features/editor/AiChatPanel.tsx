@@ -113,6 +113,8 @@ export function AiChatPanel({
   const [attachment, setAttachment] = useState<ChatImage>();
   const [applyMode, setApplyMode] = useState<'merge' | 'overwrite'>('merge');
   const [uploading, setUploading] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const historyEpoch = useRef(0);
   const [imageSummary, setImageSummary] = useState('');
   const [uploadStage, setUploadStage] = useState('');
   const uploadLock = useRef(false);
@@ -131,12 +133,13 @@ export function AiChatPanel({
     alive.current = true;
     let timer: ReturnType<typeof setTimeout>;
     const refresh = async () => {
+      const epoch = historyEpoch.current;
       try {
         const [h, p] = await Promise.all([
           api<ChatHistory>(`/projects/${projectId}/chat`),
           api<Proposal[]>(`/projects/${projectId}/proposals`),
         ]);
-        if (!alive.current) return;
+        if (!alive.current || epoch !== historyEpoch.current) return;
         setHistory(h);
         setProposals(p);
         if (!picked.current) {
@@ -161,7 +164,8 @@ export function AiChatPanel({
       transcript.current.scrollTop = transcript.current.scrollHeight;
   }, [history.runs, proposals, pendingPrompt, thread]);
   async function upload(file?: File) {
-    if (!file || readOnly || uploading || sending || running || uploadLock.current) return;
+    if (!file || readOnly || uploading || sending || running || closing || uploadLock.current)
+      return;
     uploadLock.current = true;
     setUploading(true);
     setUploadStage('이미지 축소·압축 중…');
@@ -172,6 +176,7 @@ export function AiChatPanel({
       setUploadStage('압축 이미지 업로드 중…');
       const body = new FormData();
       body.set('file', prepared.file);
+      body.set('category', 'month');
       const result = await api<ChatImage>(`/files/upload?projectId=${projectId}`, {
         method: 'POST',
         body,
@@ -196,6 +201,7 @@ export function AiChatPanel({
       sending ||
       running ||
       uploading ||
+      closing ||
       sendLock.current
     )
       return;
@@ -242,6 +248,32 @@ export function AiChatPanel({
       setPreview(await api<Proposal>(`/proposals/${id}/review`));
     } catch (e) {
       setError(errorMessage(e));
+    }
+  }
+  async function closeThread() {
+    if (!thread || closing || sending || uploading) return;
+    setClosing(true);
+    setError('');
+    try {
+      await api(`/projects/${projectId}/chat/${thread}`, { method: 'DELETE' });
+      if (!alive.current) return;
+      historyEpoch.current += 1;
+      setHistory((current) => ({
+        ...current,
+        threads: current.threads.filter((t) => t.id !== thread),
+        runs: current.runs.filter((r) => r.thread_id !== thread),
+      }));
+      picked.current = true;
+      setThread(undefined);
+      setDraft('');
+      setAttachment(undefined);
+      setImageSummary('');
+      setPreview(undefined);
+      follow.current = true;
+    } catch (e) {
+      if (alive.current) setError(errorMessage(e));
+    } finally {
+      if (alive.current) setClosing(false);
     }
   }
   async function apply() {
@@ -295,6 +327,7 @@ export function AiChatPanel({
       <div className="ai-thread-picker">
         <select
           aria-label="AI 대화 선택"
+          disabled={closing || sending || uploading}
           value={thread ?? ''}
           onChange={(e) => {
             picked.current = true;
@@ -312,6 +345,7 @@ export function AiChatPanel({
         <Button
           variant="ghost"
           aria-label="새 AI 대화"
+          disabled={closing || sending || uploading}
           onClick={() => {
             picked.current = true;
             setThread(undefined);
@@ -319,6 +353,21 @@ export function AiChatPanel({
           }}
         >
           <Plus size={16} />
+        </Button>
+        <Button
+          variant="ghost"
+          aria-label="현재 AI 대화 닫기"
+          title="대화 닫기"
+          disabled={
+            !thread ||
+            closing ||
+            sending ||
+            uploading ||
+            history.runs.some((r) => r.thread_id === thread && r.status === 'running')
+          }
+          onClick={() => void closeThread()}
+        >
+          {closing ? <LoaderCircle className="chat-spinning" size={16} /> : <X size={16} />}
         </Button>
       </div>
       {!history.enabled && (
@@ -408,7 +457,7 @@ export function AiChatPanel({
           onSend={() => void send()}
           label="AI에게 요청"
           placeholder="어떤 화면을 만들까요?"
-          disabled={!history.enabled || dirty || busy || uploading}
+          disabled={!history.enabled || dirty || busy || uploading || closing}
           pending={sending || running}
         >
           {attachment && (
@@ -417,7 +466,7 @@ export function AiChatPanel({
               <Button
                 variant="ghost"
                 aria-label="첨부 이미지 제거"
-                disabled={sending || running || uploading}
+                disabled={sending || running || uploading || closing}
                 onClick={() => {
                   setAttachment(undefined);
                   setImageSummary('');
@@ -434,7 +483,7 @@ export function AiChatPanel({
             tabIndex={-1}
             aria-label="참고 이미지 파일"
             accept="image/png,image/jpeg,image/webp,image/gif"
-            disabled={readOnly || uploading || sending || running || !history.enabled}
+            disabled={readOnly || uploading || sending || running || closing || !history.enabled}
             onChange={(e) => {
               void upload(e.target.files?.[0]);
               e.target.value = '';
@@ -443,7 +492,7 @@ export function AiChatPanel({
           <div className="ai-attachment-actions">
             <Button
               variant="ghost"
-              disabled={readOnly || uploading || sending || running || !history.enabled}
+              disabled={readOnly || uploading || sending || running || closing || !history.enabled}
               onClick={() => imageInput.current?.click()}
             >
               {uploading ? (
@@ -453,7 +502,9 @@ export function AiChatPanel({
               )}
               이미지 첨부
             </Button>
-            <small>{uploading ? uploadStage : '1장 · 1,024px / 200 KB로 자동 축소'}</small>
+            <small>
+              {uploading ? uploadStage : '1장 · 1,024px / 200 KB로 자동 축소'}
+            </small>
           </div>
           {attachment && imageSummary && (
             <small className="ai-image-summary" role="status">

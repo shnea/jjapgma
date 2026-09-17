@@ -18,7 +18,8 @@ export function useControlRowAlignment(enabled: boolean, layout: UiNode, breakpo
         (value.alignSelf && value.alignSelf !== 'auto') ||
         value.marginTop !== undefined ||
         value.marginBottom !== undefined ||
-        node.props.customCss?.trim()
+        node.props.customCss?.trim() ||
+        Object.keys(value.css ?? {}).length > 0
       )
         return [];
       const control = child.querySelector<HTMLElement>(

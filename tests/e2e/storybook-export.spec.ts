@@ -14,6 +14,8 @@ test('Storybook ZIP builds all project pages, component and template stories wit
   const spec = createSpec();
   const heading = createNode('heading');
   heading.props.text = '저장된 제목';
+  heading.style.css = { borderBottom: '3px solid rgb(40, 80, 160)', width: 'calc(100% - 16px)' };
+  heading.responsive.mobile = { css: { borderBottomWidth: 5 } };
   spec.root.children.push(heading);
   const { initial, headers } = await openSpec(page, spec, 'Storybook " </script> 페이지');
   const png = Buffer.from(
@@ -131,6 +133,11 @@ test('Storybook ZIP builds all project pages, component and template stories wit
       .toBe(200);
     await story(`page-${initial.id}--desktop`);
     await expect(exported.getByRole('heading', { name: '저장 전 제목도 포함' })).toBeVisible();
+    const cssNode = exported.locator(`[data-node-id="${heading.id}"]`);
+    await expect(cssNode).toHaveCSS('border-bottom-width', '3px');
+    await story(`page-${initial.id}--mobile`);
+    await expect(cssNode).toHaveCSS('border-bottom-width', '5px');
+    await expect(cssNode).toHaveCSS('border-bottom-color', 'rgb(40, 80, 160)');
     await story(`page-${secondPage.id}--desktop`);
     await expect
       .poll(() =>

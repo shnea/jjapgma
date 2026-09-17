@@ -36,7 +36,7 @@ React 웹 + NestJS 모듈형 단일 API + PostgreSQL. 기능을 파일·모듈�
 - HTML ZIP도 같은 NodeRenderer를 사용합니다. export/runtime.tsx를 별도 IIFE 스크립트와 CSS로 빌드하여 파일로 바로 실행합니다. 수작업 HTML 렌더러와의 스타일/동작 불일치를 없앴습니다. 빌드 설정은 [Vite Library Mode](https://vite.dev/guide/build.html#library-mode)를 따릅니다.
 - Storybook ZIP은 StorybookScreen에서 같은 NodeRenderer를 React 외부 의존 ESM/CSS로 빌드해 제공합니다. 현재 프로젝트 모든 페이지·전체 Registry·공식/개인 템플릿을 CSF Story로 생성하고 권한 확인 후 복사한 파일을 staticDirs에 포함합니다. [범위와 실행](STORYBOOK_EXPORT.md).
 - 날짜 표시와 폼 값, 표 크기, 반응형 및 ZIP 계약은 [컨트롤 동작](UI_CONTROLS.md)을 따릅니다. 새 속성은 선택 사항으로 추가하여 기존 schemaVersion 1 문서를 유지합니다.
-- 현재 UI Spec은 schemaVersion 1, root container. 최대 2,000 nodes, 깊이 40, ID 유일성, 자식 허용 규칙과 style allowlist를 검증합니다.
+- 현재 UI Spec은 schemaVersion 1, root container. 최대 2,000 nodes, 깊이 40, ID 유일성, 자식 허용 규칙과 앱 전용 style 설정을 검증합니다. 선택적 style.css는 일반 CSS 선언을 보관하며 CSS 속성별 허용 목록을 두지 않습니다. MCP는 앱 전용 설정 밖의 CSS를 이 객체로 정리합니다. 기존 props.customCss도 유지하며 렌더러·저장·내보내기에 같은 계약을 적용합니다. 반응형과 patch update는 CSS 속성별로 병합합니다. DB 마이그레이션은 없지만 style.css가 저장된 문서는 이를 지원하는 API/웹 버전을 함께 사용해야 합니다.
 - 표의 선택적 `props.table`은 열 ID 기반 셀 데이터, 기기별 숨김, 셀 종류와 표시 설정을 함께 보관합니다. `packages/ui-spec/src/table.ts`가 기존 줄/파이프 데이터 변환과 검증을 담당하며 중복 ID·없는 열 참조·허용 범위 밖 설정을 거부합니다. DB 마이그레이션 없이 페이지/버전/개인 템플릿 JSON에 포함합니다.
 - 속성 패널은 ContentFields·StyleControls·TableEditor로 나눕니다. 모바일 스타일 보정은 공통 `effectiveStyle`, 표 표시와 상호작용은 TableElement를 사용하여 캔버스·미리보기·HTML ZIP이 같은 구현을 실행합니다. 표 이미지도 기존 같은 사이트 이미지 내보내기 방식으로 ZIP에 포함합니다.
 - 반응형은 기본 style + 선택한 breakpoint의 override입니다. Desktop UI는 기본 style을 편집하고 Tablet/Mobile은 override를 편집합니다. 사용자 지정 breakpoint는 후속 작업입니다.

@@ -10,6 +10,7 @@ import {
   convertTable,
 } from '@jjapgma/ui-spec';
 import { openSpec } from './helpers';
+import { mobileLayoutFixture } from '../../apps/web/src/features/editor/mobile-layout.fixture';
 
 test('downloaded ZIP runs renderer styles and interactions offline from index.html', async ({
   page,
@@ -40,6 +41,12 @@ test('downloaded ZIP runs renderer styles and interactions offline from index.ht
   radio.props.labelPosition = 'right';
   text.props.text = '</script><img src=x onerror="window.injected=true">';
   text.props.customCss = 'letter-spacing: 3px; border: 2px solid rgb(255, 0, 0)';
+  text.style.css = {
+    borderBottomWidth: 5,
+    borderBottomColor: 'rgb(0, 80, 160)',
+    width: 'calc(100% - 16px)',
+  };
+  text.responsive.mobile = { css: { borderBottomWidth: 7 } };
   spec.root.responsive.mobile = { gap: 37 };
   spec.root.children.push(tabs, date, table, radio, image, text);
   spec.theme = structuredClone(themePresets[1].theme);
@@ -75,7 +82,13 @@ test('downloaded ZIP runs renderer styles and interactions offline from index.ht
     createNode('chart'),
     createTemplate('onboarding').root.children.find((n) => n.type === 'wizard')!,
   );
+  spec.root.children.push(...mobileLayoutFixture().root.children);
   await openSpec(page, spec, '내보내기 <&>');
+  await page.reload();
+  await expect(page.locator(`[data-node-id="${text.id}"]`).first()).toHaveCSS(
+    'border-bottom-width',
+    '5px',
+  );
   const downloadAnchors: string[] = [];
   await page.exposeFunction('captureDownload', (name: string) => downloadAnchors.push(name));
   await page.evaluate(() =>
@@ -188,9 +201,12 @@ test('downloaded ZIP runs renderer styles and interactions offline from index.ht
     'letter-spacing',
     '3px',
   );
-  await expect(exported.getByTestId('node-image').locator('img')).toBeVisible();
-  const imageFrame = (await exported.getByTestId('node-image').boundingBox())!;
-  const imageContent = (await exported.getByTestId('node-image').locator('img').boundingBox())!;
+  await expect(exported.locator(`[data-node-id="${image.id}"] img`)).toBeVisible();
+  const cssNode = exported.locator(`[data-node-id="${text.id}"]`);
+  await expect(cssNode).toHaveCSS('border-bottom-width', '5px');
+  await expect(cssNode).toHaveCSS('border-bottom-color', 'rgb(0, 80, 160)');
+  const imageFrame = (await exported.locator(`[data-node-id="${image.id}"]`).boundingBox())!;
+  const imageContent = (await exported.locator(`[data-node-id="${image.id}"] img`).boundingBox())!;
   const nextText = (await exported.locator(`[data-node-id="${text.id}"]`).boundingBox())!;
   expect(imageContent.height).toBeCloseTo(imageFrame.height, 0);
   expect(imageContent.y + imageContent.height).toBeLessThanOrEqual(nextText.y);
@@ -206,7 +222,7 @@ test('downloaded ZIP runs renderer styles and interactions offline from index.ht
   await expect(exported.locator('.table-toolbar').getByRole('status')).toContainText('2개 선택');
   expect(
     await exported
-      .getByTestId('node-image')
+      .locator(`[data-node-id="${image.id}"]`)
       .locator('img')
       .evaluate((img: HTMLImageElement) => img.naturalWidth),
   ).toBeGreaterThan(0);
@@ -227,6 +243,15 @@ test('downloaded ZIP runs renderer styles and interactions offline from index.ht
     '.999',
   );
   await exported.setViewportSize({ width: 375, height: 812 });
+  await expect(exported.locator('[data-node-id="mobile-hero"]')).toHaveCSS(
+    'flex-direction',
+    'column',
+  );
+  const mobileGrid = exported.locator('[data-node-id="mobile-grid"]');
+  const mobileCard = await mobileGrid.locator(':scope > .render-card').first().boundingBox();
+  expect(mobileCard!.width).toBeGreaterThan((await mobileGrid.boundingBox())!.width - 2);
+  await expect(cssNode).toHaveCSS('border-bottom-width', '7px');
+  await expect(cssNode).toHaveCSS('border-bottom-color', 'rgb(0, 80, 160)');
   await expect(root).toHaveCSS('gap', '37px');
   await expect(exported.locator('.configured-table thead th')).toHaveCount(3);
   await expect(root).toHaveCSS('flex-direction', 'column');

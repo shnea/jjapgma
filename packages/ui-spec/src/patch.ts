@@ -3,6 +3,7 @@ import { componentTypes } from './registry.js';
 import { propsSchema, styleSchema, validateSpec, type UiSpec } from './schema.js';
 import { createNode, findNode, insertNode, isLocked, moveNode, removeNode } from './tree.js';
 import { createTemplate } from './templates.js';
+import { mergeCss } from './css.js';
 const id = z.string().regex(/^[a-zA-Z0-9_-]{1,80}$/);
 export const operationSchema = z.discriminatedUnion('op', [
   z
@@ -11,7 +12,7 @@ export const operationSchema = z.discriminatedUnion('op', [
       parentId: id,
       id: id,
       type: z.enum(componentTypes),
-      props: propsSchema.omit({ customCss: true }).partial().optional(),
+      props: propsSchema.partial().optional(),
       style: styleSchema.optional(),
     })
     .strict(),
@@ -19,7 +20,7 @@ export const operationSchema = z.discriminatedUnion('op', [
     .object({
       op: z.literal('update'),
       nodeId: id,
-      props: propsSchema.omit({ customCss: true }).partial().optional(),
+      props: propsSchema.partial().optional(),
       style: styleSchema.optional(),
       breakpoint: z.enum(['desktop', 'tablet', 'mobile']).optional(),
     })
@@ -54,9 +55,13 @@ export function applyUiPatch(spec: UiSpec, input: unknown): UiSpec {
       const node = findNode(next.root, op.nodeId)!;
       Object.assign(node.props, op.props);
       if (op.style) {
-        if (op.breakpoint && op.breakpoint !== 'desktop')
-          node.responsive[op.breakpoint] = { ...node.responsive[op.breakpoint], ...op.style };
-        else Object.assign(node.style, op.style);
+        const target =
+          op.breakpoint && op.breakpoint !== 'desktop'
+            ? (node.responsive[op.breakpoint] ??= {})
+            : node.style;
+        const css = op.style.css ? mergeCss(target.css, op.style.css) : undefined;
+        Object.assign(target, op.style);
+        if (css) target.css = css;
       }
     } else if (op.op === 'remove') next = removeNode(next, op.nodeId);
     else if (op.op === 'move') next = moveNode(next, op.nodeId, op.parentId, op.index);

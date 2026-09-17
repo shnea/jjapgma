@@ -1,7 +1,7 @@
 import { useContext, useState, type CSSProperties, type DragEvent } from 'react';
 import { OverlayContext, OverlayProvider, ScopedOverlay, OverlayChrome } from './ScopedOverlay';
 import { GripVertical } from 'lucide-react';
-import { effectiveStyle, registry, type Breakpoint, type UiNode } from '@jjapgma/ui-spec';
+import { effectiveStyle, registry, mergeCss, type Breakpoint, type UiNode } from '@jjapgma/ui-spec';
 import { ElementContent } from './elements/ElementContent';
 import type { PageTheme } from '@jjapgma/ui-spec';
 import { themeStyle, resolveColor } from './themeStyle';
@@ -65,18 +65,6 @@ function RenderNode({
     if (container && fraction > 0.22 && fraction < 0.78) return 'inside';
     return fraction < 0.5 ? 'before' : 'after';
   }
-  function parseCustomCss(cssStr?: string): CSSProperties {
-    if (!cssStr) return {};
-    const custom: Record<string, string> = {};
-    cssStr.split(';').forEach((statement) => {
-      const [key, ...values] = statement.split(':');
-      if (key && values.length) {
-        const camelKey = key.trim().replace(/-([a-z])/g, (_, c) => c.toUpperCase());
-        custom[camelKey] = values.join(':').trim();
-      }
-    });
-    return custom as CSSProperties;
-  }
   const style: CSSProperties = {
     width:
       value.alignSelf === 'stretch' && (!value.width || value.width === 'auto')
@@ -96,7 +84,7 @@ function RenderNode({
         : value.minHeight,
     maxHeight: value.maxHeight,
     flexGrow: value.grow ? 1 : undefined,
-    flexBasis: value.grow ? 0 : undefined,
+    flexBasis: value.grow && (breakpoint !== 'mobile' || horizontal) ? 0 : undefined,
     flexShrink: value.shrink === false ? 0 : undefined,
     position: value.sticky ? 'sticky' : undefined,
     top: value.sticky ? 0 : undefined,
@@ -184,7 +172,6 @@ function RenderNode({
           }
         : {}),
     } as CSSProperties),
-    ...parseCustomCss(node.props.customCss),
   };
   const themedStyle = {
     ...themeStyle(theme, node, value, root),
@@ -253,7 +240,26 @@ function RenderNode({
     );
   const rendered = (
     <div
-      ref={controlRow}
+      ref={(element) => {
+        controlRow.current = element;
+        if (!element) return;
+        // Restore the previous base before React updates it, then apply declarations in order.
+        // This preserves shorthand values when a responsive longhand override is removed.
+        const baseCss = element.style.cssText;
+        if (node.props.customCss) element.style.cssText += `;${node.props.customCss}`;
+        for (const [property, cssValue] of Object.entries(mergeCss(value.css))) {
+          element.style.setProperty(
+            property,
+            typeof cssValue === 'number' && !CSS.supports(property, String(cssValue))
+              ? `${cssValue}px`
+              : String(cssValue),
+          );
+        }
+        return () => {
+          if (node.props.customCss || value.css) element.style.cssText = baseCss;
+          controlRow.current = null;
+        };
+      }}
       data-node-id={node.id}
       data-collapse-visibility={node.props.collapseVisibility}
       data-page-root={root ? 'true' : undefined}
@@ -264,6 +270,7 @@ function RenderNode({
         node.type === 'image' && value.height && value.height !== 'auto' ? 'true' : undefined
       }
       data-self-stretch={value.alignSelf === 'stretch' ? 'true' : undefined}
+      data-breakpoint={breakpoint}
       data-overflow-x={value.overflowX ?? value.overflow}
       data-page-theme={(root || overlay) && theme ? 'true' : undefined}
       data-testid={`node-${node.type}`}

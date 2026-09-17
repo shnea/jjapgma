@@ -80,6 +80,8 @@ Respond to Webhook: JSON, status 200. Response Body 표현식:
 
 `reply`는 비어 있지 않은 문자열이어야 한다. 기존 `choices[0].message.content` 응답도 호환한다. 도구가 제안을 생성한 경우 “제안을 만들었습니다. 미리보기에서 적용해 주세요”라고 안내한다. 자연어의 “완료”를 실제 저장 성공으로 해석하지 않는다.
 
+AI Agent의 실제 output이 `""`이면 Respond to Webhook에서 이를 reply로 전달해도 모델 설명은 비어 있다. 앱은 같은 실행·프로젝트·사용자 소유의 pending 제안이 DB에 저장됐고 이미지 처리 확인도 통과한 경우에만 “변경 제안은 생성됐지만 AI 설명이 비어 있습니다”라는 상태 안내로 미리보기·적용을 이어간다. 제안이 없으면 `empty_reply`, 필드가 없거나 타입이 잘못됐으면 `missing_reply`로 구분한다. HTTP/JSON 오류 및 응답의 error 또는 choices의 error/finish_reason=error는 복구하지 않는다. 이 처리는 재생성이나 모델 우회가 아니며 외부 n8n 설정 변경을 요구하지 않는다. `{output:""}`를 reply로 매핑하지 않고 Webhook 본문에 그대로 반환하는 계약 오류는 계속 실패한다.
+
 워크플로 오류는 성공 문자열로 숨기지 말고 실패 HTTP 상태를 반환한다. 변경 작업을 자동 재시도하지 않는다.
 
 ## 6. 활성화와 확인
@@ -95,7 +97,13 @@ Respond to Webhook: JSON, status 200. Response Body 표현식:
 
 ## 7. 요청은 도착하지만 답변을 받지 못할 때
 
-`Model output doesn't fit required format`은 n8n 출력 파서가 기대한 형식과 모델 출력이 맞지 않는 경우를 먼저 확인한다. AI Agent의 Parameters에서 Require Specific Output Format을 끄고, 연결된 Output Parser 선이 있으면 해제한다. Respond to Webhook의 JSON 표현식은 유지하고 저장·게시 후 앱에서 새 요청으로 검사한다. On Error를 Continue로 바꾸어 실패를 성공 응답으로 보내지 않는다. 해당 옵션이 이미 꺼져 있다면 실패 노드 이름과 Error details를 확인하여 파서 오류인지 도구 인자/모델 출력 오류인지 구분한다. [n8n 출력 파서 주의사항](https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.outputparserstructured/common-issues).
+2026-09-18 사용자는 현재 Model이 `openrouter/free`라고 확인했습니다. 이는 단일 모델 ID가 아니라 요청에 필요한 이미지·도구 호출 기능을 지원하는 무료 모델 중 무작위로 선택하는 라우터입니다. 호출별 실제 모델이 같다고 가정하지 않으며, 이 설정 자체가 이번 오류의 원인이라고 단정하지 않습니다. 재현 시 이미지 입력과 tool calling을 함께 지원하는 명시적 모델 ID로 고정하면 모델 선택 변수를 줄일 수 있습니다. 현재 무료 비교 후보는 `inclusionai/ling-3.0-flash-vl:free`이며 실제 적용·성공 검증은 하지 않았습니다. 실패 원인 확정에는 해당 요청의 실제 모델/제공자와 오류 상세가 필요합니다. [무료 라우터 계약](https://openrouter.ai/openrouter/free), [비교 후보의 지원 기능](https://openrouter.ai/inclusionai/ling-3.0-flash-vl:free).
+
+`Model output doesn't fit required format`만으로 별도 Structured Output Parser의 연결 문제라고 단정하지 않는다. n8n의 공개 `wrapLangChainParserError` 구현은 여러 OutputParserException을 같은 메시지로 감싼다. 도구 호출 인자의 JSON 해석 실패도 이 예외를 낼 수 있으므로 Require Specific Output Format이 OFF여도 발생할 수 있다. 옵션이 ON이고 별도 출력 파서가 연결된 경우에는 이 앱의 일반 문자열 답변 계약에 맞춰 해제하지만, 이미 OFF로 확인한 설정을 반복 변경하지 않는다. Agent 내부에서 실패했다면 Respond to Webhook 표현식 변경이나 On Error=Continue로 원인을 해결할 수 없다. 마지막 Chat Model 실행의 Output에서 tool_calls/invalid_tool_calls, arguments와 finish_reason을 확인해 잘못된 JSON·출력 잘림·최종 답변 파싱을 구분한다. 원문에 자격 증명이나 비공개 데이터가 있으면 공유하지 않는다. [n8n 공개 오류 처리 코드](https://github.com/n8n-io/n8n/blob/master/packages/@n8n/nodes-langchain/utils/output_parsers/langchainParserError.ts), [LangChain 도구 호출 파서](https://github.com/langchain-ai/langchainjs/blob/main/libs/langchain-classic/src/agents/tool_calling/output_parser.ts).
+
+2026-09-18 사용자 제공 스택은 n8n 2.38.7 / AI Agent 3.1의 `wrapLangChainParserError → ToolsAgent/V3/helpers/executeBatch` 경로입니다. 별도 출력 파서 연결 여부나 JSON 잘림 원인을 확정하는 스택은 아닙니다. 최근 개발 요청은 get_design_context 성공(53ms) 뒤 생성 도구 호출 기록 없이 219156ms에 n8n HTTP 500으로 종료됐습니다. 조사한 공개 master 코드와 설치 버전의 정확한 일치는 확인하지 못했으며, 마지막 모델 응답 원문/종료 사유 확인이 남아 있습니다.
+
+후속으로 사용자가 두 Chat Model 기록을 제공했습니다. 첫 호출은 finish_reason=tool_calls, 입력 7157/출력 421토큰이며 두 번째는 finish_reason=error, 입력 16312/출력 3002토큰, 빈 text입니다. 도구 호출에서 빈 text 자체는 실패 증거가 아니며 두 번째 error 종료가 핵심입니다. OpenRouter는 생성 중 오류도 이 종료 사유로 전달합니다. 이 요약에는 구체적인 error.message/metadata·모델/제공자와 도구 인자가 없으므로 공급자 장애·요청 변환·출력 잘림 중 원인을 확정할 수 없습니다. 출력 3002라는 숫자만 보고 3000토큰 한도 초과로 결론내리지 않습니다. 현재 모델명/출력 한도와 해당 OpenRouter 요청의 오류 상세를 다음으로 확인합니다. [OpenRouter 오류 계약](https://openrouter.ai/docs/api_reference/errors-and-debugging).
 
 Webhook의 Respond는 `Using 'Respond to Webhook' Node`, 마지막 Respond to Webhook은 JSON을 선택하고 Response Body 전체를 Expression 모드에서 `{{ JSON.stringify({ reply: $json.output }) }}`로 설정한다. 바깥에 따옴표나 중괄호를 추가하지 않는다. `Immediately`의 접수 메시지나 Agent의 `{output: ...}`만 반환하면 앱의 답변 계약에 맞지 않는다.
 
@@ -103,7 +111,7 @@ Webhook의 Respond는 `Using 'Respond to Webhook' Node`, 마지막 Respond to We
 
 MCP initialize와 tools/list의 200/202만으로 모델 실행이나 도구 호출 성공을 판단하지 않는다. 실행이 끝나거나 실패한 뒤에는 해당 실행의 MCP 주소가 만료되므로 짭그마에서 새 요청으로 재검사한다.
 
-create_page 입력이 `op:"create"`, `componentType`, 부모가 없는 요소 배열이라면 작업 형식이 잘못된 것이다. 올바른 추가 예시는 `{"op":"add","parentId":"page-root","id":"header","type":"container","style":{"padding":24}}`다. 루트 page-root는 이미 있으므로 update하며 문자열 padding이나 flex는 쓰지 않는다. get_design_context와 쓰기 스키마 오류 응답의 operationGuide를 따른다. 최신 System Message에는 수정 후 한 번만 재시도하고 같은 인자/연결 종료에 재시도하지 않는 지침이 있다. 서버의 안내는 즉시 제공되지만 n8n System Message는 사용자가 [파일](../infra/n8n/system-prompt.txt) 전체로 교체하고 저장·게시해야 한다.
+create_page 입력이 `op:"create"`, `componentType`, 부모가 없는 요소 배열이라면 작업 형식이 잘못된 것이다. 올바른 추가 예시는 `{"op":"add","parentId":"page-root","id":"header","type":"container","style":{"padding":24}}`다. 루트 page-root는 이미 있으므로 update하며 CSS 문자열 padding이나 flex는 style.css에 넣는다. get_design_context와 쓰기 스키마 오류 응답의 operationGuide를 따른다. 최신 System Message에는 수정 후 한 번만 재시도하고 같은 인자/연결 종료에 재시도하지 않는 지침이 있다. 서버의 안내는 즉시 제공되지만 n8n System Message는 사용자가 [파일](../infra/n8n/system-prompt.txt) 전체로 교체하고 저장·게시해야 한다.
 
 ### 약 90초 뒤 HTTP 504 / MCP Connection closed
 
@@ -122,6 +130,16 @@ proxy_read_timeout 330s;
 설정 대상은 앱에서 호출하는 n8n 주소의 프록시다. 저장 후 짭그마에서 새 메시지를 보내 새 실행 URL로 확인한다. 과거 실패한 실행 URL이나 고정한 runId로 MCP 노드만 다시 실행하지 않는다. 외부 설정은 사용자가 관리하며 이 저장소에서 변경하지 않았다.
 
 템플릿이 없는 새 화면은 `create_page.operations`로 실제 요소를 조합한다. 새 루트 ID는 `page-root`다. Agent가 빈 페이지만 반복 제안하면 최신 도구 목록을 사용하는 새 대화로 요청하고 System Message를 최신 [프롬프트](../infra/n8n/system-prompt.txt)로 갱신한다. `blank=true`는 사용자가 명시적으로 빈 페이지를 요청할 때만 사용한다. 이전에 저장된 빈 제안은 자동으로 채워지지 않으며 사용자가 거절할 수 있다.
+
+### 이미지 설명은 되지만 화면 생성이 5분에 끝나는 경우
+
+2026-09-17 개발 재현에서 create_page 입력 검증이 두 번 실패한 뒤 300초에 앱이 요청을 실패 처리했습니다. 도구 처리 자체는 각각 4ms였고, 두 생성 호출 사이에 약 108초가 걸렸습니다. 사용자가 제공한 n8n 오류에는 숫자 width/height/minWidth, style 안의 src/placeholder/searchWidth/mobileSearch/searchTargetId/responsive, 미지원 borderBottomWidth/borderBottomColor가 있었습니다. 이 개발 재현을 운영 이력으로 간주하지 않습니다.
+
+최신 API는 숫자 크기와 충돌 없는 props·반응형 표기를 정리하고, 편집기 전용 설정이 없는 일반 CSS는 style.css로 보존합니다. 방향별 테두리, calc 크기, flex 등도 사용할 수 있으며 props.customCss 선언 문자열도 허용합니다. 앱 전용 설정·권한·트리 검증은 유지합니다. 반복 오류를 묶어 다른 오류와 전체 작업 한도가 가려지지 않도록 반환합니다. 새 입력 설명은 MCP 도구 조회로 제공됩니다. AI Agent의 System Message도 [최신 프롬프트](../infra/n8n/system-prompt.txt) 전체로 교체하고 저장·게시하면 같은 작성 규칙을 사용합니다. 외부 워크플로 수정은 사용자가 수행합니다.
+
+캡처 기반 UI 재구성은 카드의 썸네일 영역·비율과 화면 배치를 보존하고, 내부 사진·일러스트·작은 글자/도형은 원본 자산이 없으면 기본 image 또는 플레이스홀더로 대체하도록 안내합니다. 텍스트도 버튼·메뉴·탭·입력 라벨 등 UI 문구와 게시물 제목·본문·작성자·날짜·상품 설명·수치 등 콘텐츠를 구분합니다. 콘텐츠는 비슷한 길이·줄 수의 예시로 대체하며 흐린 글자 복원이나 원문 검색에 시간을 쓰지 않습니다. 영역·계층·타이포그래피는 유지하고 대체 사실을 알립니다. 원문·브랜드·자산 사용을 사용자가 명시하면 그 요청을 따릅니다. 이 기준은 모델 지침이며 자동 콘텐츠 분류기의 보장은 아닙니다. 사용자가 지정한 `화면 캡처 2026-09-17 230152.png`는 3열 게시물 카드의 썸네일 안에 로봇·보안 다이어그램이 포함된 예입니다. 이것이 실제 지연 원인이었다는 실행 증거는 아직 없습니다.
+
+앱의 5분 timeout이 n8n 실행 자체를 취소하는 것은 아닙니다. 실패한 요청의 MCP 권한은 즉시 종료되므로, n8n에서 계속 실행 중이어도 뒤늦은 호출은 401로 거절될 수 있습니다. 해당 실행은 중지하고 수정된 설정으로 새 요청을 보내야 합니다. 대기 한도를 늘리기 전에 생성 도구의 실제 issues를 확인합니다. 이번 변경에서 앱 timeout·n8n 반복 횟수·프록시 제한을 변경하지 않습니다.
 
 ## 8. 참고 이미지 연결
 

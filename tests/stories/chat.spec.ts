@@ -58,6 +58,73 @@ test('chat keyboard preserves composition and multiline input, then sends with E
   await expect(page.getByRole('status')).toContainText('미리보기 메시지');
 });
 
+test('AI conversations close independently, persist after reload and retain state on failure', async ({
+  page,
+}) => {
+  let threads = [
+    { id: 'one', title: '첫 대화' },
+    { id: 'two', title: '둘째 대화' },
+  ];
+  let fail = true;
+  let running = false;
+  await page.route('**/api/projects/demo/proposals', (r) => r.fulfill({ json: [] }));
+  await page.route('**/api/projects/demo/chat', (r) =>
+    r.fulfill({
+      json: {
+        enabled: true,
+        threads,
+        runs: running
+          ? [
+              {
+                id: 'run',
+                thread_id: 'two',
+                page_id: 'page',
+                prompt: '질문',
+                reply: '',
+                status: 'running',
+              },
+            ]
+          : [],
+      },
+    }),
+  );
+  await page.route('**/api/projects/demo/chat/*', async (r) => {
+    expect(r.request().method()).toBe('DELETE');
+    if (fail) return r.fulfill({ status: 409, json: { message: '닫기 실패' } });
+    const id = r.request().url().split('/').at(-1);
+    threads = threads.filter((t) => t.id !== id);
+    await r.fulfill({ json: { closed: true } });
+  });
+  await story(page, '빌더/AI 채팅', 'Close Conversation');
+  const picker = page.getByRole('combobox', { name: 'AI 대화 선택' });
+  const close = page.getByRole('button', { name: '현재 AI 대화 닫기' });
+  await expect(picker).toHaveValue('one');
+  await close.click();
+  await expect(page.getByRole('alert')).toContainText('닫기 실패');
+  await expect(picker).toHaveValue('one');
+  fail = false;
+  await close.focus();
+  await page.keyboard.press('Enter');
+  await expect(picker).toHaveValue('');
+  await expect(picker.locator('option')).toHaveText(['새 대화', '둘째 대화']);
+  await expect(close).toBeDisabled();
+  await page.reload();
+  await expect(picker).toHaveValue('two');
+  await expect(picker.locator('option')).toHaveText(['새 대화', '둘째 대화']);
+  running = true;
+  await expect(close).toBeDisabled();
+  running = false;
+  await expect(close).toBeEnabled();
+  await close.click();
+  await expect(picker.locator('option')).toHaveText(['새 대화']);
+  await page.reload();
+  await expect(picker).toHaveValue('');
+  await expect(close).toBeDisabled();
+  expect((await new AxeBuilder({ page }).include('.ai-chat-panel').analyze()).violations).toEqual(
+    [],
+  );
+});
+
 test('AI chat uploads a reference, renders safe Markdown, sends on Enter and shows waiting status', async ({
   page,
 }) => {
@@ -123,7 +190,9 @@ test('AI chat uploads a reference, renders safe Markdown, sends on Enter and sho
   await page.getByLabel('AI에게 요청').fill('이 이미지처럼 그려줘');
   await page.getByLabel('AI에게 요청').press('Enter');
   await expect.poll(() => sent?.imageFileId).toBe('image-1');
-  await expect(page.getByRole('log', { name: 'AI 대화 메시지' }).getByRole('status')).toContainText('답변을 준비');
+  await expect(page.getByRole('log', { name: 'AI 대화 메시지' }).getByRole('status')).toContainText(
+    '답변을 준비',
+  );
   await expect(page.getByRole('button', { name: '보내기', exact: true })).toBeDisabled();
   await page.screenshot({ path: 'test-results/ai-chat-waiting.png' });
 });
@@ -145,6 +214,7 @@ test('AI reference upload resizes large originals before multipart upload, prese
       headers: { 'Content-Type': route.request().headers()['content-type'] },
     }).formData();
     const file = form.get('file') as File;
+    expect(form.get('category')).toBe('month');
     uploads.push({
       name: file.name,
       type: file.type,
@@ -279,13 +349,11 @@ test('AI reference conversion fills transparent backgrounds and uses a still GIF
     [...uploads[0]],
   );
   expect(pixel).toEqual([255, 255, 255, 255]);
-  await page
-    .getByLabel('참고 이미지 파일')
-    .setInputFiles({
-      name: 'animation.gif',
-      mimeType: 'image/gif',
-      buffer: Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64'),
-    });
+  await page.getByLabel('참고 이미지 파일').setInputFiles({
+    name: 'animation.gif',
+    mimeType: 'image/gif',
+    buffer: Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64'),
+  });
   await expect.poll(() => uploads.length).toBe(2);
   await expect(page.locator('.ai-image-summary')).toContainText('GIF 첫 프레임');
 });

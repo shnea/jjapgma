@@ -85,6 +85,13 @@ class AiController {
   ) {
     return this.chat.send(parse(uuid, id), r.identity.id, parse(chatInput, body));
   }
+  @Delete('projects/:projectId/chat/:threadId') closeChat(
+    @Req() r: AuthRequest,
+    @Param('projectId') projectId: string,
+    @Param('threadId') threadId: string,
+  ) {
+    return this.chat.close(parse(uuid, projectId), r.identity.id, parse(uuid, threadId));
+  }
   @Get('projects/:projectId/proposals') proposalsList(
     @Req() r: AuthRequest,
     @Param('projectId') id: string,

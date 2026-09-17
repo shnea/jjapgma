@@ -12,12 +12,26 @@ import { NodeRenderer } from './NodeRenderer';
 function Demo({
   kind = 'button',
   disabled = false,
+  iconName,
+  extraCss = false,
 }: {
   kind: 'button' | 'container' | 'grid' | 'table' | 'input';
   disabled?: boolean;
+  iconName?: string;
+  extraCss?: boolean;
 }) {
   const [node, setNode] = useState(() => {
     const n = createNode(kind);
+    if (iconName) n.props.iconName = iconName;
+    if (extraCss) {
+      n.style.css = {
+        borderBottomColor: 'rgb(0, 0, 0)',
+        borderBottom: '3px solid rgb(220, 40, 40)',
+        letterSpacing: '2px',
+        width: 'calc(100% - 20px)',
+      };
+      n.responsive.mobile = { css: { borderBottomColor: 'rgb(40, 80, 220)' } };
+    }
     if (kind === 'table') {
       n.props.text = '회원 목록';
       n.props.paginationMode = 'pagination';
@@ -99,6 +113,9 @@ const meta = { title: '빌더/속성 편집', component: Demo, args: { kind: 'bu
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const ButtonProperties: Story = {};
+export const ShareButton: Story = { args: { iconName: 'share' } };
+export const ExportButton: Story = { args: { iconName: 'export' } };
+export const CustomCss: Story = { args: { extraCss: true } };
 export const ContainerProperties: Story = { args: { kind: 'container' } };
 export const GridProperties: Story = { args: { kind: 'grid' } };
 export const TableProperties: Story = { args: { kind: 'table' } };

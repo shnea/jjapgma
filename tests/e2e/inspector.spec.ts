@@ -122,7 +122,7 @@ test('responsive alignment, visual button choices and directional spacing persis
   spec.root.children.push(row);
   await open(page, spec);
   await page.getByTestId('node-button').click();
-  await page.getByRole('button', { name: '검색 아이콘', exact: true }).click();
+  await page.getByRole('button', { name: '공유 아이콘', exact: true }).click();
   await page.getByRole('button', { name: '아이콘 위치: 글자 뒤' }).click();
   await page.getByLabel('글자 크기 (px)', { exact: true }).fill('20');
   await page.getByRole('button', { name: '모바일', exact: true }).click();
@@ -137,6 +137,7 @@ test('responsive alignment, visual button choices and directional spacing persis
   await expect(page.getByTestId('node-button')).toHaveCSS('align-self', 'center');
   await expect(page.locator('.artboard .element-button')).toHaveCSS('padding-left', '24px');
   await expect(page.locator('.artboard .element-button')).toHaveCSS('font-size', '20px');
+  await expect(page.locator('.artboard .element-button .lucide-share-2')).toBeVisible();
   await expect(page.locator('.artboard .element-button')).toHaveCSS(
     'flex-direction',
     'row-reverse',

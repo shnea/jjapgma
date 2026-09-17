@@ -7,12 +7,40 @@ async function open(page: Page, name: string) {
   ).find((e) => e.title === '빌더/속성 편집' && e.name === name)!;
   await page.goto(`/iframe.html?id=${entry.id}&viewMode=story`);
 }
+test('additional CSS renders, edits and inherits across breakpoints', async ({ page }) => {
+  await open(page, 'Custom Css');
+  const node = page.locator('.inspector-story-canvas .render-button');
+  await expect(node).toHaveCSS('border-bottom-width', '3px');
+  await expect(node).toHaveCSS('border-bottom-color', 'rgb(220, 40, 40)');
+  await page.getByText('고급 스타일', { exact: true }).click();
+  await page.getByLabel('CSS letter-spacing', { exact: true }).fill('4px');
+  await expect(node).toHaveCSS('letter-spacing', '4px');
+  await page.getByLabel('화면 크기').selectOption('mobile');
+  await expect(node).toHaveCSS('border-bottom-width', '3px');
+  await expect(node).toHaveCSS('border-bottom-color', 'rgb(40, 80, 220)');
+  await expect(node).toHaveCSS('letter-spacing', '4px');
+  await page.getByLabel('화면 크기').selectOption('desktop');
+  await expect(node).toHaveCSS('border-bottom-color', 'rgb(220, 40, 40)');
+});
+
 test('visual controls edit actual icons, sizes and spacing; containers have no grid settings', async ({
   page,
 }) => {
   await open(page, 'Button Properties');
   await page.getByRole('button', { name: '수정 아이콘', exact: true }).click();
   await expect(page.locator('.inspector-story-canvas .lucide-pencil')).toBeVisible();
+  const search = page.getByRole('searchbox', { name: '아이콘 검색' });
+  for (const [query, label, icon] of [
+    ['공유', '공유', 'share-2'],
+    ['내보내기', '내보내기', 'download'],
+    ['user-plus', '사용자 초대', 'user-plus'],
+    ['잠금 해제', '잠금 해제', 'lock-open'],
+  ]) {
+    await search.fill(query);
+    await page.getByRole('button', { name: `${label} 아이콘`, exact: true }).click();
+    await expect(page.locator(`.inspector-story-canvas .lucide-${icon}`)).toBeVisible();
+  }
+  await search.fill('');
   await page.getByRole('button', { name: '아이콘 위치: 글자 뒤' }).click();
   await expect(page.locator('.inspector-story-canvas .element-button')).toHaveCSS(
     'flex-direction',

@@ -55,17 +55,38 @@ export class ChatService {
     );
     const threads = (
       await this.db.pool.query(
-        'SELECT id,title,created_at FROM ai_threads WHERE project_id=$1 AND user_id=$2 ORDER BY created_at DESC LIMIT 30',
+        'SELECT id,title,created_at FROM ai_threads WHERE project_id=$1 AND user_id=$2 AND closed_at IS NULL ORDER BY created_at DESC LIMIT 30',
         [projectId, userId],
       )
     ).rows;
     const runs = (
       await this.db.pool.query(
-        "SELECT id,thread_id,page_id,prompt,reply,status,created_at,completed_at,context->'image' AS image FROM ai_runs WHERE project_id=$1 AND user_id=$2 ORDER BY created_at DESC LIMIT 100",
+        "SELECT id,thread_id,page_id,prompt,reply,status,created_at,completed_at,context->'image' AS image FROM ai_runs WHERE project_id=$1 AND user_id=$2 AND thread_id IN (SELECT id FROM ai_threads WHERE closed_at IS NULL) ORDER BY created_at DESC LIMIT 100",
         [projectId, userId],
       )
     ).rows.reverse();
     return { enabled: config.AI_ENABLED === 'true', threads, runs };
+  }
+  async close(projectId: string, userId: string, threadId: string) {
+    return this.db.transaction(async (db) => {
+      await projectAccess(db, projectId, userId);
+      // Serialize closing and sending for the same user.
+      await db.query('SELECT id FROM users WHERE id=$1 FOR UPDATE', [userId]);
+      const thread = await db.query(
+        'SELECT id FROM ai_threads WHERE id=$1 AND project_id=$2 AND user_id=$3',
+        [threadId, projectId, userId],
+      );
+      if (!thread.rowCount) throw new NotFoundException('대화를 찾을 수 없습니다.');
+      const active = await db.query(
+        "SELECT id FROM ai_runs WHERE thread_id=$1 AND status='running' AND expires_at>now() LIMIT 1",
+        [threadId],
+      );
+      if (active.rowCount) throw new ConflictException('AI 응답이 끝난 뒤 대화를 닫아 주세요.');
+      await db.query('UPDATE ai_threads SET closed_at=COALESCE(closed_at,now()) WHERE id=$1', [
+        threadId,
+      ]);
+      return { closed: true };
+    });
   }
   async send(projectId: string, userId: string, input: ChatInput) {
     if (this.stopping)
@@ -149,7 +170,7 @@ export class ChatService {
       let thread = input.threadId;
       if (thread) {
         const exists = await db.query(
-          'SELECT id FROM ai_threads WHERE id=$1 AND project_id=$2 AND user_id=$3',
+          'SELECT id FROM ai_threads WHERE id=$1 AND project_id=$2 AND user_id=$3 AND closed_at IS NULL',
           [thread, projectId, userId],
         );
         if (!exists.rowCount) throw new NotFoundException('대화를 찾을 수 없습니다.');
@@ -250,13 +271,34 @@ export class ChatService {
       });
       httpStatus = response.status;
       stage = 'response';
-      const reply = await readWebhookReply(response, image?.fileId, async (body) => {
-        try {
-          await this.usage.report(runId, usageToken, body);
-        } catch {
-          console.error(JSON.stringify({ event: 'ai_usage_report_failed', runId }));
-        }
-      });
+      let reply: string;
+      try {
+        reply = await readWebhookReply(response, image?.fileId, async (body) => {
+          try {
+            await this.usage.report(runId, usageToken, body);
+          } catch {
+            console.error(JSON.stringify({ event: 'ai_usage_report_failed', runId }));
+          }
+        });
+      } catch (error) {
+        // Only an explicitly empty answer may be replaced, after image acknowledgement.
+        // The stored proposal for this run is authoritative; model claims are not.
+        if (!(error instanceof WebhookResponseError) || error.code !== 'empty_reply') throw error;
+        const proposal = await this.db.pool.query(
+          "SELECT id FROM ui_proposals WHERE run_id=$1 AND project_id=$2 AND user_id=$3 AND status='pending' LIMIT 1",
+          [runId, projectId, userId],
+        );
+        if (!proposal.rowCount) throw error;
+        reply =
+          '변경 제안은 생성됐지만 AI 설명이 비어 있습니다. 미리보기에서 내용을 확인하고 적용해 주세요.';
+        console.info(
+          JSON.stringify({
+            event: 'ai_reply_recovered',
+            runId,
+            reason: 'empty_reply_with_proposal',
+          }),
+        );
+      }
       stopSignal.throwIfAborted();
       stage = 'save';
       await projectAccess(this.db.pool, projectId, userId);

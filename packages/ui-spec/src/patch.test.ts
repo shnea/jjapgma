@@ -26,11 +26,10 @@ test('AI patches are atomic, preserve locked nodes and reject unsupported proper
   group.children = [button];
   spec.root.children = [group];
   assert.throws(() => applyUiPatch(spec, [{ op: 'remove', nodeId: group.id }]));
-  assert.throws(() =>
-    applyUiPatch(spec, [
-      { op: 'update', nodeId: group.id, props: { customCss: 'position:fixed;' } },
-    ]),
-  );
+  const styled = applyUiPatch(spec, [
+    { op: 'update', nodeId: group.id, props: { customCss: 'position:fixed;' } },
+  ]);
+  assert.equal(styled.root.children[0].props.customCss, 'position:fixed;');
 });
 test('duplicating overlay groups remaps internal action targets and preserves external targets', () => {
   const group = createNode('container'),

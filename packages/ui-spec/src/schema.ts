@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { componentTypes, registry, type ComponentType } from './registry.js';
 import { themeSchema, type PageTheme } from './theme.js';
 import { tableSchema } from './table.js';
+import { cssSchema } from './css.js';
 export const breakpoints = ['desktop', 'tablet', 'mobile'] as const;
 export type Breakpoint = (typeof breakpoints)[number];
 const color = z
@@ -41,6 +42,7 @@ export const menuItemSchema = menuItemBase.extend({
 export type MenuItem = z.infer<typeof menuItemBase> & { children?: MenuItem[] };
 export const styleSchema = z
   .object({
+    css: cssSchema.optional(),
     width: dimension.optional(),
     height: dimension.optional(),
     minWidth: dimension.optional(),
