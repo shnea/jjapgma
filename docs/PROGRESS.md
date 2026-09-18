@@ -4,6 +4,13 @@
 
 환경·외부 연결의 현재 값은 [PROJECT_SETUP](PROJECT_SETUP.md), 실행은 [DEVELOPMENT](DEVELOPMENT.md), 기능 책임은 [ARCHITECTURE](ARCHITECTURE.md)를 확인합니다. 날짜별 상세 이력은 [PROGRESS_HISTORY](PROGRESS_HISTORY.md)에 보존했습니다. 과거의 “미구현·연결 대기” 문구를 현재 상태로 적용하지 않습니다.
 
+## 후속 수정 — 화면 하단의 서식 편집기 메뉴
+
+- 원본 데모와 비교해 `/` → 위 방향키로 마지막 Emoji가 선택되지만 목록 밖으로 숨는 현상을 다시 조사했습니다. 항목 누락이 아니라 위치 계산 중 상속된 메뉴 높이가 반복 변경되면서 스크롤 위치가 줄어드는 문제였습니다. 패키지 변경이 필요하다는 이전 판단을 정정합니다.
+- 앱의 `RichTextSurface`에서 계산된 메뉴 높이를 프레임마다 직접 반영하고, 높이·선택 항목이 바뀔 때 해당 목록 안에서만 스크롤을 보정합니다. 기존 패키지의 항목·키보드 처리·위/아래 배치를 유지하며 마우스 휠 스크롤도 허용합니다. 패키지 소스·버전은 바꾸지 않았습니다.
+- 화면 하단 `BottomEditor` Story와 회귀 검사를 추가했습니다. 500px에서 320px로 줄어드는 화면과 낮은 본문 편집 모달에서 마지막 항목 표시, 휠 스크롤, 메뉴 재열기, Emoji 선택·삽입을 검사합니다.
+- 검증: `docker compose -f compose.test.yaml build test`, 테스트 컨테이너의 `npm run lint && npm run typecheck && npm run test:stories -- rich-text.spec.ts` 통과(관련 Story 검사 4개). 최신 테스트 파일을 읽기 전용 마운트한 재검사에서도 4개 통과했습니다. 메뉴 닫힘 애니메이션 종료를 기다리도록 테스트를 보완한 뒤 `--grep 'slash menu' --repeat-each=3`도 3회 통과했습니다. 캡처는 `test-results/stories/rich-text-slash-menu-*/slash-last-{bottom-editor,design}.png`에 있습니다. 개발/운영 배포·추가 커밋/푸시는 수행하지 않았습니다.
+
 ## 후속 수정 — n8n Agent 지침 동기화
 
 - `infra/n8n/system-prompt.txt`에 richText 선택 기준, 문서 작성/공지 템플릿, 본문 JSON·파일 참조, tmp/default 책임 구분을 추가했습니다. 일반 문구는 heading/text를 유지하고 최신 MCP 명세를 기준으로 선택하도록 안내합니다.
@@ -73,7 +80,6 @@
 
 ## 다음 작업과 남은 제약
 
-- 2026-09-19 사용자 요청으로 낮은 화면의 `/` 메뉴 높이 문제는 보류합니다. 320px 높이에서 메뉴가 약 44px로 줄어 항목 선택이 불편한 현상을 재현했습니다. 포털 위치 변경만으로 충분히 해결되지 않았으며 패키지 소스·앱 구현에는 추가 수정을 적용하지 않았습니다. 재현용 스크립트와 캡처는 Git 제외 경로 `test-results/refactor/slash-height-*`에 있습니다.
 - 실제 AI 모델의 반복 호출 실패·출력 파싱·시간 초과는 완전히 해결된 상태가 아닙니다. 기존 빈 답변 복구는 같은 실행의 저장된 pending 제안에 한정합니다. n8n 설정과 실제 호출 품질은 [N8N_SETUP](N8N_SETUP.md)을 따릅니다.
 - 편집기의 다중 선택·pan/snap·정렬 가이드·사용자 지정 breakpoint, 페이지 복제/정렬, 충돌 비교 UX, 대용량 목록 pagination은 후속 범위입니다.
 - 에디터 전체는 넓은 화면 중심입니다. 휴대폰에서 편집기 전체를 조작하는 UX와 사용자가 만든 페이지의 모바일 미리보기를 구분합니다.

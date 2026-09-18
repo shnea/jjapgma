@@ -68,6 +68,13 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const Editor: Story = {};
+export const BottomEditor: Story = {
+  render: (args) => (
+    <div style={{ paddingTop: 'max(0px, calc(100dvh - 240px))' }}>
+      <NodeRenderer {...args} />
+    </div>
+  ),
+};
 export const Runtime: Story = { render: () => <RuntimeEditor /> };
 export const ImageControls: Story = {
   args: {

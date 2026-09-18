@@ -1,6 +1,62 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
+test('slash menu keeps the last keyboard item visible when space below the editor shrinks', async ({
+  page,
+}, testInfo) => {
+  for (const story of ['bottom-editor', 'design']) {
+    await page.setViewportSize({ width: 1100, height: story === 'design' ? 320 : 500 });
+    await page.goto(`/iframe.html?id=빌더-서식-편집기--${story}&viewMode=story`);
+    if (story === 'design')
+      await page.getByRole('button', { name: '본문 편집', exact: true }).click();
+    const editor = page.locator('[contenteditable=true]').first();
+    await editor.fill('');
+    await editor.pressSequentially('/');
+    const menu = page.getByRole('listbox');
+    const emoji = menu.getByRole('option', { name: /Emoji/ });
+    await menu.waitFor();
+    await editor.press('ArrowUp');
+    await expect(emoji).toHaveAttribute('aria-selected', 'true');
+    if (story === 'bottom-editor') await page.setViewportSize({ width: 1100, height: 320 });
+    await expect
+      .poll(() =>
+        emoji.evaluate((item) => {
+          const list = item.closest('[role=listbox]')!.getBoundingClientRect();
+          const bounds = item.getBoundingClientRect();
+          const visible = Math.min(bounds.bottom, list.bottom) - Math.max(bounds.top, list.top);
+          return (
+            list.top >= 0 &&
+            list.bottom <= innerHeight &&
+            visible >= Math.min(bounds.height, list.height) - 3
+          );
+        }),
+      )
+      .toBe(true);
+    await page.screenshot({
+      path: testInfo.outputPath(`slash-last-${story}.png`),
+      animations: 'disabled',
+    });
+    const bounds = await menu.boundingBox();
+    await page.mouse.move(bounds!.x + bounds!.width / 2, bounds!.y + bounds!.height - 20);
+    const scrollTop = await menu.evaluate((list) => list.scrollTop);
+    await page.mouse.wheel(0, -600);
+    await expect.poll(() => menu.evaluate((list) => list.scrollTop)).toBeLessThan(scrollTop);
+    await page.mouse.move(1000, 0);
+    await editor.press('Escape');
+    await expect(menu).toHaveCount(0);
+    await editor.fill('');
+    await editor.pressSequentially('/');
+    await expect(menu.getByRole('option').first()).toHaveAttribute('aria-selected', 'true');
+    await editor.press('ArrowUp');
+    await expect(emoji).toHaveAttribute('aria-selected', 'true');
+    await editor.press('Enter');
+    await expect(page.locator('.bn-grid-suggestion-menu')).toBeVisible();
+    await page.getByRole('grid').getByRole('option').first().click();
+    await expect(page.locator('.bn-grid-suggestion-menu')).toHaveCount(0);
+    await expect(editor).not.toHaveText('');
+  }
+});
+
 test('rich text design edits apply, cancel and clear through the real package', async ({
   page,
 }) => {

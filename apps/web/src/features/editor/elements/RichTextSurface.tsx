@@ -143,6 +143,47 @@ export function RichTextSurface({
     if (dialog && portal) dialog.appendChild(portal);
   }, [editing]);
   useEffect(() => {
+    const portal = editing ? editor.current?.getEditor().portalElement : undefined;
+    if (!portal) return;
+    let frame = 0;
+    let selectedItem: HTMLElement | null = null;
+    const sizeMenu = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const menu = portal.querySelector<HTMLElement>('.bn-suggestion-menu');
+        const maxHeight = menu?.parentElement?.style.maxHeight;
+        const resized = !!menu && !!maxHeight && menu.style.maxHeight !== maxHeight;
+        // Inheriting max-height exposes the list to FloatingUI's intermediate placement
+        // measurements, which clamp scrollTop before the final smaller height is restored.
+        // Apply the calculated height once per frame so keyboard scrolling stays intact.
+        if (resized) menu.style.maxHeight = maxHeight;
+        const selected = menu?.querySelector<HTMLElement>('[role="option"][aria-selected="true"]');
+        const changed = selectedItem !== selected;
+        selectedItem = selected ?? null;
+        // Keep mouse-wheel scrolling free until selection or available space changes.
+        if (!resized && !changed) return;
+        if (!menu || !selected) return;
+        const top = selected.offsetTop;
+        const bottom = top + selected.offsetHeight;
+        if (bottom > menu.scrollTop + menu.clientHeight)
+          menu.scrollTop = Math.min(top, bottom - menu.clientHeight);
+        else if (top < menu.scrollTop) menu.scrollTop = top;
+      });
+    };
+    const mutations = new MutationObserver(sizeMenu);
+    mutations.observe(portal, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['style', 'aria-selected'],
+    });
+    sizeMenu();
+    return () => {
+      mutations.disconnect();
+      cancelAnimationFrame(frame);
+    };
+  }, [editing]);
+  useEffect(() => {
     if (!editing) return;
     const host = surface.current!;
     let frame = 0;
