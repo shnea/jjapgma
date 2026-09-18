@@ -5,9 +5,12 @@ export async function validateFileReferences(client: PoolClient, spec: UiSpec, p
   const files = new Map<string, NonNullable<UiNode['props']['attachment']>>();
   const references: NonNullable<UiNode['props']['attachment']>[] = [];
   function visit(node: UiNode) {
-    if (node.props.attachment) {
-      files.set(node.props.attachment.fileId, node.props.attachment);
-      references.push(node.props.attachment);
+    for (const file of [
+      ...(node.props.attachment ? [node.props.attachment] : []),
+      ...(node.props.richTextFiles ?? []),
+    ]) {
+      files.set(file.fileId, file);
+      references.push(file);
     }
     node.children.forEach(visit);
   }

@@ -19,6 +19,14 @@ const extras: Partial<Record<ComponentType, (keyof z.infer<typeof propsSchema>)[
   table: ['table'],
   image: ['attachment'],
   fileUpload: ['attachment'],
+  richText: [
+    'documentJson',
+    'richTextFiles',
+    'richTextMode',
+    'richTextFont',
+    'richTextImageModal',
+    'disabled',
+  ],
   modal: ['showFooter', 'closeOnBackdrop'],
   dialog: ['isOpen', 'showFooter', 'closeOnBackdrop'],
   nonModal: ['showFooter', 'closeOnBackdrop'],
@@ -73,6 +81,8 @@ export function componentSchema(type: ComponentType) {
 
 export const operationGuide = {
   rules: [
+    'richText는 @shnea/blocknote 서식 본문입니다. 문서 작성은 document-editor, 읽기 전용 공지는 notice-document 템플릿을 활용할 수 있습니다. documentJson은 BlockNote 블록 배열의 JSON 문자열이며 빈 본문은 빈 문자열, 최대 UTF-8 128 KiB입니다. richTextMode=editor/viewer, richTextFont=sans/serif/mono, richTextImageModal은 뷰어 이미지 확대 설정입니다. HTML·Markdown 원문·data URL을 저장하지 마세요.',
+    'richText 첨부는 현재 프로젝트에서 권한이 확인된 richTextFiles(fileId/name/mimeType)와 jjapgma-file:파일ID URL을 함께 보존하세요. 파일 ID나 메타데이터를 만들지 말고 첨부가 없으면 텍스트 안내로 남기세요. 작성용 업로드는 tmp, 실제 소비 서비스의 새 업로드는 category 생략으로 default를 사용하지만 업로드 연동은 앱 책임입니다. category는 UI Spec 속성이 아니며 기존 tmp 파일은 자동 승격되지 않습니다. 입력 체험·템플릿·내보내기를 실제 업로드·업무 저장 API 연결로 설명하지 마세요.',
     'src/placeholder/searchWidth/mobileSearch/searchTargetId는 props에 넣으세요. 기본 style의 width/height/minWidth/maxWidth/minHeight/maxHeight는 "120px"/"100%"/"auto" 같은 문자열입니다. 숫자 정수 0~9999는 px로 정리합니다.',
     '일반 CSS는 style.css에 camelCase/kebab-case 속성과 문자열/숫자로 전달하세요. 한쪽 테두리·calc()·flex·필터·변형·그라데이션 등도 지원합니다. props.customCss 선언 문자열도 허용합니다. 같은 CSS를 중복 지정하지 마세요.',
     '반응형은 별도의 {op:"update",nodeId:"대상ID",breakpoint:"mobile",style:{css:{borderBottomColor:"#000000"}}} 작업입니다. 모바일 CSS는 기본 CSS에 속성별로 병합합니다. operations는 반응형 작업 포함 최대 100개입니다.',

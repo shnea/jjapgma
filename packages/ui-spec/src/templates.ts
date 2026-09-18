@@ -18,6 +18,9 @@ import {
   failure,
   onboarding,
   analytics,
+  login,
+  documentEditor,
+  noticeDocument,
 } from './template-builders.js';
 
 export const templateCategories = [
@@ -29,6 +32,22 @@ export const templateCategories = [
 ] as const;
 
 const templateDefinitions = [
+  {
+    id: 'document-editor',
+    build: documentEditor,
+    themeIndex: 0,
+    name: '문서 작성',
+    category: '콘텐츠',
+    description: '제목·요약과 서식 편집기로 구성한 문서 작성 화면. 미리보기 입력은 체험용입니다.',
+  },
+  {
+    id: 'notice-document',
+    build: noticeDocument,
+    themeIndex: 0,
+    name: '공지·안내 문서',
+    category: '콘텐츠',
+    description: '제목·목록·표가 있는 읽기 전용 공지. 본문 편집으로 내용을 변경합니다.',
+  },
   {
     id: 'main',
     build: main,
@@ -222,6 +241,8 @@ const templateOrder = [
   'chat',
   'content-list',
   'content-detail',
+  'document-editor',
+  'notice-document',
   'pricing',
   'checkout',
   'result-success',
@@ -244,8 +265,17 @@ export function createTemplate(id: string): UiSpec {
   if (!definition) throw new Error('Unknown template');
   const spec = createSpec();
   spec.theme = structuredClone(themePresets[definition.themeIndex].theme);
-  spec.root.style = { direction: 'column', padding: 40, gap: 24 };
-  spec.root.responsive.mobile = { padding: 20, gap: 16 };
+  spec.theme = {
+    ...spec.theme,
+    background: '#f7f8fa',
+    surface: '#ffffff',
+    border: '#dfe5e5',
+    text: '#20312d',
+    muted: '#606f6b',
+    radius: 12,
+  };
+  spec.root.style = { direction: 'column', padding: 48, gap: 32 };
+  spec.root.responsive.mobile = { padding: 20, gap: 24 };
   definition.build(spec);
   return validateSpec(spec);
 }
@@ -399,31 +429,82 @@ function chat(spec: UiSpec) {
   ];
 }
 function landing(spec: UiSpec) {
+  spec.theme!.background = '#f8faf6';
+  const headline = heading('아이디어를\n멋진 경험으로', 64);
+  headline.style.maxWidth = '660px';
+  headline.responsive.mobile = { fontSize: 40 };
+  const introduction = group(
+    'container',
+    [
+      headline,
+      text(
+        '작은 시작부터 완성된 화면까지. 팀의 아이디어를 한곳에서 정리하고, 함께 더 나은 경험을 만들어 보세요.',
+      ),
+      element(
+        'button',
+        '지금 시작하기',
+        { marginTop: 12 },
+        { iconName: 'arrow-right', iconPosition: 'end' },
+      ),
+    ],
+    { padding: 0, gap: 24, grow: true, minWidth: '0px' },
+  );
+  const preview = group(
+    'card',
+    [
+      element('text', '나의 작업 공간', { fontSize: 14, color: 'theme:muted' }),
+      heading('다음 아이디어를 위한 자리', 24),
+      element('divider'),
+      element(
+        'descriptionList',
+        '작업 흐름',
+        {},
+        {
+          items:
+            '아이디어|가능성을 발견하는 시간\n디자인|생각을 화면으로 옮기기\n함께하기|팀의 의견으로 더 단단하게',
+        },
+      ),
+      element('badge', '함께 만들 준비가 되었어요', {}, { shape: 'pill' }),
+    ],
+    { width: '420px', padding: 32, gap: 20, shadow: 'medium', shrink: false },
+  );
+  preview.responsive.mobile = { width: '100%', padding: 24 };
+  preview.responsive.tablet = { width: '340px' };
   spec.root.children = [
     group(
       'container',
       [heading('STUDIO', 22), element('link', '서비스 알아보기', {}, { href: '#features' })],
       { direction: 'row', justify: 'space-between', padding: 0 },
     ),
-    group(
-      'card',
-      [
-        element('badge', '작은 아이디어의 시작'),
-        heading('아이디어를 멋진 경험으로', 44),
-        text('우리의 서비스가 일상의 문제를 어떻게 해결하는지 소개해 보세요.'),
-        button('지금 시작하기'),
-      ],
-      { padding: 40, gap: 24 },
-    ),
+    group('container', [introduction, preview], {
+      direction: 'row',
+      align: 'center',
+      padding: 0,
+      paddingTop: 48,
+      paddingBottom: 48,
+      gap: 48,
+      controlAlignment: 'layout',
+    }),
+    element('divider'),
     group(
       'grid',
-      ['간편한 시작', '함께하는 작업', '일관된 경험'].map((title) =>
-        group('card', [
-          heading(title, 22),
-          text('고객에게 전달할 핵심 가치를 짧고 명확하게 설명해 주세요.'),
-        ]),
+      [
+        [
+          '간편한 시작',
+          '빈 화면 앞에서 고민하는 시간을 줄이세요. 템플릿을 고르고 나만의 방식으로 다듬으면 됩니다.',
+        ],
+        [
+          '함께하는 작업',
+          '하나의 작업 공간에서 아이디어를 나누세요. 팀의 피드백이 다음 디자인으로 이어집니다.',
+        ],
+        [
+          '일관된 경험',
+          '공통 컴포넌트로 화면의 결을 맞추세요. 작은 요소부터 완성된 페이지까지 자연스럽게 연결됩니다.',
+        ],
+      ].map(([title, description]) =>
+        group('container', [heading(title, 22), text(description)], { padding: 0, gap: 12 }),
       ),
-      { gridColumns: 3, padding: 0 },
+      { gridColumns: 3, padding: 0, gap: 32 },
     ),
     text('© 2026 STUDIO. 함께 더 나은 경험을 만듭니다.'),
   ];
@@ -511,23 +592,6 @@ function form(spec: UiSpec) {
         button('문의 제출'),
       ],
       { width: '100%', gap: 20 },
-    ),
-  ];
-}
-function login(spec: UiSpec) {
-  spec.root.style.align = 'center';
-  spec.root.children = [
-    group(
-      'card',
-      [
-        heading('다시 만나 반가워요', 28),
-        text('계정으로 로그인해 작업을 이어가세요.'),
-        input('이메일', 'email'),
-        input('비밀번호', 'password'),
-        button('로그인'),
-        element('link', '비밀번호를 잊으셨나요?', {}, { href: '#' }),
-      ],
-      { width: '440px', padding: 32, gap: 20 },
     ),
   ];
 }

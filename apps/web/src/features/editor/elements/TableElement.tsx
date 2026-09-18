@@ -232,8 +232,12 @@ export function TableElement({ node, breakpoint }: { node: UiNode; breakpoint: B
       className={`element-table-wrapper configured-table density-${table.density ?? 'normal'} borders-${table.borders ?? 'horizontal'}${table.hover === false ? '' : ' hover-rows'}${table.stickyHeader ? ' sticky-header' : ''}`}
       style={
         {
-          '--table-stripe': table.stripeColor ?? '#f3f6f3',
-          '--table-header': table.headerColor ?? 'var(--page-surface, #f0f3ec)',
+          '--table-stripe':
+            table.stripeColor ??
+            'color-mix(in srgb, var(--page-text, #253129) 2%, var(--page-surface, #fff))',
+          '--table-header':
+            table.headerColor ??
+            'color-mix(in srgb, var(--page-text, #253129) 4%, var(--page-surface, #fff))',
           '--table-header-text': table.headerColor
             ? textColor(table.headerColor)
             : 'var(--page-text, #253129)',

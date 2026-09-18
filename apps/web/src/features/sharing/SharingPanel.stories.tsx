@@ -78,3 +78,12 @@ type Story = StoryObj<typeof meta>;
 export const Auto: Story = {};
 export const Email: Story = { args: { mode: 'email' } };
 export const Failed: Story = { args: { mode: 'email', failed: true } };
+export const LoadFailed: Story = {
+  render: () => (
+    <SharingPanel
+      error="공유 목록을 불러오지 못했습니다."
+      busy={false}
+      actions={{ add: async () => false, change: () => {}, remove: () => {}, retry: () => {} }}
+    />
+  ),
+};

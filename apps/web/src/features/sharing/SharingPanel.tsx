@@ -62,7 +62,7 @@ export function SharingPanel({
         </p>
       )}
       {!data ? (
-        <p role="status">공유 목록을 불러오고 있습니다…</p>
+        !error && <p role="status">공유 목록을 불러오고 있습니다…</p>
       ) : (
         <>
           <p>

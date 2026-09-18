@@ -40,7 +40,7 @@ export class FileClient {
     }
     return response;
   }
-  async upload(file: UploadFile, name: string, category?: 'month') {
+  async upload(file: UploadFile, name: string, category?: 'month' | 'tmp') {
     if (!this.token) throw new ServiceUnavailableException('파일 업로드 연결 설정이 필요합니다.');
     const form = new FormData();
     form.set('file', new Blob([new Uint8Array(file.buffer)], { type: file.mimetype }), name);

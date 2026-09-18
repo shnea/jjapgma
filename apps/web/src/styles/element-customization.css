@@ -139,6 +139,27 @@
   outline: 2px solid var(--page-primary, #52763b);
   outline-offset: 2px;
 }
+.render-node .field-control {
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+.render-node .field-control:hover:not(:disabled):not([aria-invalid='true']) {
+  border-color: color-mix(in srgb, var(--page-text, #253129) 35%, var(--page-border, #d7dfd2));
+}
+.render-node .field-control::placeholder {
+  color: var(--page-muted, #68766e);
+  opacity: 1;
+}
+.render-node .field-control:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+@media (prefers-reduced-motion: reduce) {
+  .render-node .field-control {
+    transition: none;
+  }
+}
 .render-node .picker-trigger {
   flex: 0 1 auto;
 }

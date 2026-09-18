@@ -61,6 +61,7 @@ const icons: Record<ComponentType, typeof Square> = {
   // 기본
   heading: Heading,
   text: Type,
+  richText: FileText,
   button: MousePointer2,
   link: LinkIcon,
   icon: Star,

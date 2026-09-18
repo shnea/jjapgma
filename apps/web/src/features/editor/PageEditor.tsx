@@ -255,20 +255,6 @@ function PageEditorContent({
   const [loadingRevisions, setLoadingRevisions] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
 
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement).closest('dialog')) return;
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
-        e.preventDefault();
-        if (dirty && !saving && !readOnly && !conflict) {
-          void save();
-        }
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [dirty, saving, readOnly, conflict, save]);
-
   const openHistory = async () => {
     setShowHistory(true);
     setLoadingRevisions(true);
@@ -388,7 +374,6 @@ function PageEditorContent({
   useEffect(() => {
     function keyboard(event: KeyboardEvent) {
       if ((event.target as HTMLElement).closest('dialog')) return;
-      if ((event.target as HTMLElement).closest('.ai-chat-panel')) return;
       if (
         (event.ctrlKey || event.metaKey) &&
         ['c', 'x'].includes(event.key.toLowerCase()) &&
@@ -400,6 +385,7 @@ function PageEditorContent({
         void save();
         return;
       }
+      if ((event.target as HTMLElement).closest('.ai-chat-panel')) return;
       if (
         readOnly ||
         preview ||

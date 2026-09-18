@@ -22,8 +22,8 @@ test('input row actions center on the control across labels, heights, editor mod
       .toBeLessThan(1);
     const a = (await input.boundingBox())!,
       b = (await button.boundingBox())!;
-    expect(b.y).toBeGreaterThan(a.y);
-    expect(b.y + b.height).toBeLessThan(a.y + a.height);
+    expect(b.y).toBeGreaterThanOrEqual(a.y - 1);
+    expect(b.y + b.height).toBeLessThanOrEqual(a.y + a.height + 1);
   }
   await centered();
   await page.getByLabel('큰 입력칸', { exact: true }).check();

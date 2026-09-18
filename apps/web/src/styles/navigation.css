@@ -23,6 +23,7 @@
   display: flex;
   align-items: center;
   gap: 14px;
+  min-width: 0;
 }
 .project-card-header-row .project-card-actions {
   display: flex;
@@ -30,12 +31,18 @@
   gap: 5px;
   flex-shrink: 0;
 }
-.share-project-btn {
+.share-project-btn,
+.delete-project-btn {
   background: transparent;
   border: none;
-  color: #798575;
-  padding: 4px;
+  color: var(--muted);
+  padding: 8px;
+  min-width: 36px;
+  min-height: 36px;
+  border-radius: 6px;
   display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .share-project-btn:hover {
   color: #354d26;
@@ -43,18 +50,10 @@
   border-radius: 4px;
 }
 .page-settings-dialog {
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 24px;
-  width: min(440px, calc(100vw - 32px));
-  color: var(--ink);
-}
-.page-settings-dialog::backdrop {
-  background: #17201966;
+  width: 440px;
 }
 .page-settings-dialog h2 {
   font-size: 18px;
-  margin-bottom: 24px;
 }
 .page-settings-dialog label {
   display: grid;
@@ -190,7 +189,13 @@
     gap: 6px;
   }
   .workspace-account .profile-chip {
-    max-width: 115px;
-    overflow: hidden;
+    display: none;
+  }
+  .workspace .notification-bell > .notification-panel {
+    position: fixed;
+    top: 124px;
+    right: 16px;
+    max-height: calc(100dvh - 140px);
+    overflow-y: auto;
   }
 }

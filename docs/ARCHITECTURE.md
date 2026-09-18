@@ -1,5 +1,7 @@
 # 짭그마 아키텍처
 
+서식 본문은 승인된 `@shnea/blocknote@0.1.5`의 Editor/Viewer를 사용합니다. `richText`의 documentJson·richTextFiles를 기존 UI Spec/Revision/개인 템플릿에 저장하고, 공통 스키마와 기존 파일 참조 검증으로 입력·소유권을 확인합니다. 별도 DB나 편집 엔진은 만들지 않습니다. [연동과 사용법](RICH_TEXT_EDITOR.md).
+
 React 웹 + NestJS 모듈형 단일 API + PostgreSQL. 기능을 파일·모듈로 분리하고 UI 명세의 원본은 서버에 저장합니다.
 
 ## 코드 경계

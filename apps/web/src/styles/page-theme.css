@@ -24,10 +24,18 @@
 .render-node[data-page-theme] .render-node a {
   color: var(--node-link);
 }
-.render-node[data-page-theme]
-  :is(th, .element-badge, .modal-header-bar, .dialog-header-bar, .dialog-footer-bar) {
+.render-node[data-page-theme] :is(th, .modal-header-bar, .dialog-header-bar, .dialog-footer-bar) {
   background: var(--page-surface);
   color: var(--node-color);
+}
+.render-node[data-page-theme] .element-badge {
+  background: var(--node-background);
+  color: var(--node-color);
+}
+.render-node[data-page-theme] .pagination-control button[aria-current='page'] {
+  background: var(--page-primary);
+  border-color: var(--page-primary);
+  color: var(--page-on-primary);
 }
 .render-node[data-page-theme] :is(td, th, .render-card, hr) {
   border-color: var(--page-border);

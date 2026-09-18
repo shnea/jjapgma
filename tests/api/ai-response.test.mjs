@@ -17,7 +17,7 @@ test('AI webhook accepts reply and legacy completion, distinguishes missing or m
     ['{"message":"Workflow got started"}', 'missing_reply'],
     ['{"output":"Agent output not mapped to reply"}', 'missing_reply'],
     ['{"reply":{}}', 'missing_reply'],
-    ['{"reply":" "}', 'missing_reply'],
+    ['{"reply":" "}', 'empty_reply'],
   ]) {
     await assert.rejects(
       () => readWebhookReply(new Response(body)),

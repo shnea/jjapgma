@@ -1,9 +1,13 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath } from 'node:url';
+import { esmExternalRequirePlugin } from 'rolldown/plugins';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    esmExternalRequirePlugin({ external: [/^react(?:\/|$)/, /^react-dom(?:\/|$)/] }),
+  ],
   publicDir: false,
   define: { 'process.env.NODE_ENV': JSON.stringify('production') },
   build: {
@@ -17,6 +21,8 @@ export default defineConfig({
       fileName: () => 'renderer.js',
       cssFileName: 'styles',
     },
-    rollupOptions: { external: [/^react(?:\/|$)/, /^react-dom(?:\/|$)/] },
+    rolldownOptions: {
+      output: { codeSplitting: false },
+    },
   },
 });

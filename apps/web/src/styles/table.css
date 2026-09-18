@@ -6,6 +6,8 @@
 .configured-table .element-table-scroll {
   overflow: auto;
   max-width: 100%;
+  border: 1px solid var(--page-border, #dfe5df);
+  border-radius: var(--page-radius, 10px);
 }
 .configured-table.sticky-header .element-table-scroll {
   max-height: 420px;
@@ -22,7 +24,8 @@
 .configured-table table caption {
   text-align: left;
   font-weight: 600;
-  padding: 0 0 10px;
+  padding: 12px 14px;
+  background: var(--page-surface, #fff);
 }
 .render-node .configured-table th,
 .render-node .configured-table td {
@@ -35,6 +38,7 @@
   background: var(--table-header);
   color: var(--table-header-text, var(--page-text, #253129));
   font-weight: 600;
+  font-size: 0.92em;
 }
 .render-node .configured-table td {
   background: var(--row-color, var(--page-surface, #fff));
@@ -47,8 +51,8 @@
   filter: brightness(0.97);
 }
 .render-node .configured-table tr.selected td {
-  background: #e7f0e0;
-  color: #243b20;
+  background: color-mix(in srgb, var(--page-primary, #466e2c) 9%, var(--page-surface, #fff));
+  color: var(--page-text, #243b20);
 }
 .render-node .configured-table.density-compact :is(th, td) {
   padding: 7px 10px;
@@ -139,8 +143,8 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  background: #e9f0e2;
-  color: #3c5e2a;
+  background: color-mix(in srgb, var(--page-primary, #466e2c) 8%, var(--page-surface, #fff));
+  color: var(--page-primary, #3c5e2a);
   border-radius: 20px;
   font-size: 12px;
   padding: 4px 8px;
@@ -156,8 +160,9 @@
   width: auto;
   min-width: 80px;
   max-width: 100%;
-  padding: 7px 9px;
-  font-size: 12px;
+  padding: 9px 12px;
+  min-height: 40px;
+  font-size: 13px;
   flex: 1;
 }
 .render-node .table-toolbar input:not([type='checkbox']) {

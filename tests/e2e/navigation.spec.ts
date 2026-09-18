@@ -64,7 +64,7 @@ test('template panel inserts without replacing content, saves personal snapshots
   expect(
     Math.abs(searchInput.y + searchInput.height / 2 - addButton.y - addButton.height / 2),
   ).toBeLessThan(1);
-  expect(addButton.y + addButton.height).toBeLessThan(searchInput.y + searchInput.height);
+  expect(Math.abs(addButton.height - searchInput.height)).toBeLessThan(1);
   expect(addButton.x).toBeGreaterThan(searchInput.x + searchInput.width);
   await page.keyboard.press('Escape');
   await page.getByLabel('템플릿 검색').fill('없는 결과');
@@ -208,12 +208,13 @@ test('template picker creates an editable page and root theme supports undo and 
   await dialog.getByRole('button', { name: '페이지 만들기', exact: true }).click();
   await expect(dialog).toHaveCount(0);
   const theme = page.getByLabel('테마 프리셋');
-  await expect(theme).toHaveValue('forest');
+  await expect(theme).toHaveValue('custom');
   await theme.selectOption('ocean');
   const button = page.locator('.artboard .element-button');
   await expect(button).toHaveCSS('background-color', 'rgb(36, 88, 166)');
   await page.getByRole('button', { name: '실행 취소', exact: true }).click();
-  await expect(theme).toHaveValue('forest');
+  await expect(theme).toHaveValue('custom');
+  await expect(button).toHaveCSS('background-color', 'rgb(70, 110, 44)');
   await theme.selectOption('violet');
   await page.getByLabel('기본 모서리', { exact: true }).fill('20');
   await page.getByLabel('기본 글꼴', { exact: true }).selectOption('serif');

@@ -4,6 +4,7 @@
   min-width: 0;
   max-width: 100%;
   flex-shrink: 1;
+  font-variant-numeric: tabular-nums;
 }
 .render-node[draggable='true'] {
   cursor: grab;
@@ -66,8 +67,20 @@
   line-height: 1.7;
   margin: 0;
 }
-.render-node input,
-.render-node textarea {
+.render-heading :is(h1, h2, h3, h4, h5, h6) {
+  text-wrap: balance;
+  word-break: keep-all;
+  letter-spacing: -0.025em;
+}
+.render-text p {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.render-node ::selection {
+  background: color-mix(in srgb, var(--page-primary, #466e2c) 20%, transparent);
+}
+.render-node input:not(:where(.rich-text-surface *)),
+.render-node textarea:not(:where(.rich-text-surface *)) {
   display: block;
   width: 100%;
   padding: 10px 12px;
@@ -76,7 +89,7 @@
   color: inherit;
   font-size: inherit;
 }
-.render-node label {
+.render-node label:not(:where(.rich-text-surface *)) {
   font-size: inherit;
   display: block;
 }
@@ -89,7 +102,7 @@
   width: auto;
   margin: 0;
 }
-.render-node button {
+.render-node button:not(:where(.rich-text-surface *)) {
   padding: 11px 21px;
   border: 0;
   border-radius: 6px;
@@ -97,7 +110,7 @@
   color: #fff;
   font-size: inherit;
 }
-.render-node hr {
+.render-node hr:not(:where(.rich-text-surface *)) {
   border: 0;
   border-top: 1px solid #e3e8dd;
   width: 100%;

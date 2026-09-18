@@ -11,6 +11,7 @@ import {
   type UiNode,
 } from '@jjapgma/ui-spec';
 import versions from '../../../../../../package.json';
+import richTextGuide from '../../../../../../docs/RICH_TEXT_RUNTIME.md?raw';
 import { api, type Project } from '../../../lib/api';
 import type { Page, PageSummary } from '../types';
 import type { ExportAssets } from './ExportAssets';
@@ -179,6 +180,15 @@ export async function createStorybookArchive(
     while (queue.length) {
       const node = queue.pop()!;
       queue.push(...node.children);
+      for (const file of node.props.richTextFiles ?? []) {
+        if (!entry.scope) throw new Error(`${file.name}: 본문 첨부파일 소속을 확인할 수 없습니다.`);
+        const src = await asset(
+          `/api/${entry.scope}/files/${encodeURIComponent(file.fileId)}/content`,
+          file.name,
+          file.mimeType,
+        );
+        entry.assets[`${node.id}:file:${file.fileId}`] = { src, download: src };
+      }
       if (node.props.attachment) {
         const file = node.props.attachment;
         if (!entry.scope) throw new Error(`${file.name}: 파일의 소속을 확인할 수 없습니다.`);
@@ -252,5 +262,8 @@ export default { parameters: { layout: 'fullscreen', options: { storySort: { ord
   });
   files['README.md'] =
     `# 짭그마 Storybook\n\nNode.js 24에서 npm install 후 npm run storybook을 실행하고 http://localhost:6006 을 여세요. npm run build-storybook으로 정적 사이트를 만듭니다.\n\n프로젝트 ${pages.length}개 페이지, 전체 ${componentTypes.length}종 컴포넌트, 공식 ${pageTemplates.length}개와 개인 ${personal.length}개 템플릿, 이미지 ${imageList.length}개를 포함합니다. 현재 페이지는 내보내기를 누른 시점의 미저장 편집도 포함하며 나머지는 저장된 화면입니다.\n\n각 화면에는 Desktop/Tablet/Mobile Story가 있고 Controls의 spec을 수정해 배치를 시험할 수 있습니다. src/data는 편집 가능한 명세, renderer는 편집기와 동일한 실제 렌더러와 CSS, public/assets는 복사한 파일입니다. 이미지 목록에서 원본을 내려받을 수 있습니다. 실행 시 짭그마 로그인이나 파일 서비스 연결이 필요하지 않습니다.\n\n입력·메뉴·캐러셀·차트 등 미리보기 동작을 제공합니다. 로그인·결제·AI·업로드·DB 저장 등 업무 API는 자동 연결되지 않습니다. 별도 API를 연결해야 합니다.\n`;
+  files['README.md'] +=
+    '\n서식 편집기의 실제 서비스 연결과 default 업로드 정책은 RICH_TEXT.md를 참고하세요.\n';
+  files['RICH_TEXT.md'] = richTextGuide;
   return createZip(files);
 }

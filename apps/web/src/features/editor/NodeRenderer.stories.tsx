@@ -28,3 +28,17 @@ export const MobileHidden: Story = {
   args: { breakpoint: 'mobile', node: { ...input, responsive: { mobile: { hidden: true } } } },
 };
 export const Selected: Story = { args: { preview: false, selectedId: input.id } };
+const feedback = createNode('container');
+feedback.style = { direction: 'column', padding: 0, gap: 20 };
+feedback.children = (['info', 'success', 'warning', 'error'] as const).map((stateType) => {
+  const node = createNode('alert');
+  node.props.stateType = stateType;
+  node.props.text = {
+    info: '변경 내용을 확인한 뒤 저장해 주세요.',
+    success: '변경 사항을 저장했습니다.',
+    warning: '저장하지 않은 변경 사항이 있습니다.',
+    error: '저장하지 못했습니다. 다시 시도해 주세요.',
+  }[stateType];
+  return node;
+});
+export const Feedback: Story = { args: { node: feedback } };

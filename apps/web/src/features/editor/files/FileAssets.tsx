@@ -12,6 +12,7 @@ type Assets = {
 };
 const Context = createContext<Assets | null>(null);
 export const FileAssetsProvider = Context.Provider;
+export const useFileAssets = () => useContext(Context);
 export function FileUploadControl({ node }: { node: UiNode }) {
   const exportedAssets = useContext(ExportAssetsContext);
   const assets = useContext(Context);

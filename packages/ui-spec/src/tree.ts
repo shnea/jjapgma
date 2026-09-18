@@ -1,5 +1,6 @@
 import { registry, legacyTypeAliases, type ComponentType } from './registry.js';
 import { nodeId } from './id.js';
+import { richTextExample } from './rich-text.js';
 import { mergeCss } from './css.js';
 import { inputTypes, optionTypes } from './catalog/forms.js';
 import { horizontalTypes } from './catalog/layout.js';
@@ -17,6 +18,14 @@ export function createNode(typeOrLegacy: string, inheritTheme = false): UiNode {
     locked: false,
     props: {
       text: registry[type].text,
+      ...(type === 'richText'
+        ? {
+            documentJson: richTextExample,
+            richTextMode: 'editor' as const,
+            richTextFont: 'sans' as const,
+            richTextImageModal: true,
+          }
+        : {}),
       ...(type === 'chart'
         ? {
             chartVariant: 'bar' as const,
@@ -167,11 +176,24 @@ export function createNode(typeOrLegacy: string, inheritTheme = false): UiNode {
             : {}),
           ...legacy?.style,
         }
-      : type === 'chat'
-        ? { height: '560px', width: '100%' }
-        : type === 'spacer'
-          ? { height: '48px' }
-          : {},
+      : type === 'richText'
+        ? {
+            width: '100%',
+            minHeight: '240px',
+            fontSize: 16,
+            lineHeight: 1.7,
+            padding: 24,
+            background: 'theme:surface',
+            color: 'theme:text',
+            borderWidth: 1,
+            borderColor: 'theme:border',
+            radius: 12,
+          }
+        : type === 'chat'
+          ? { height: '560px', width: '100%' }
+          : type === 'spacer'
+            ? { height: '48px' }
+            : {},
     responsive: {},
     children: [],
   };

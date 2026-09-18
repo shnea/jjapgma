@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ArrowUpRight,
   LayoutGrid,
@@ -21,30 +21,40 @@ export function Projects({ user, logout }: { user: User; logout: () => void }) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [loadError, setLoadError] = useState('');
   const [query, setQuery] = useState('');
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
+  const [deleting, setDeleting] = useState<string>();
   const [sharing, setSharing] = useState<Project>();
-  function load(showLoading = true) {
-    setError('');
+  const requestVersion = useRef(0);
+  const load = useCallback(async (showLoading = true) => {
+    const version = ++requestVersion.current;
+    setLoadError('');
     if (showLoading) setLoading(true);
-    api<Project[]>('/projects')
-      .then(setProjects)
-      .catch((e) => setError(errorMessage(e)))
-      .finally(() => setLoading(false));
-  }
-  useEffect(load, []);
+    try {
+      const next = await api<Project[]>('/projects');
+      if (version === requestVersion.current) setProjects(next);
+    } catch (e) {
+      if (version === requestVersion.current) setLoadError(errorMessage(e));
+    } finally {
+      if (version === requestVersion.current) setLoading(false);
+    }
+  }, []);
   useEffect(() => {
-    const refresh = () => load(false);
+    void load();
+    const refresh = () => void load(false);
     window.addEventListener('project-access-changed', refresh);
     window.addEventListener('focus', refresh);
     return () => {
+      requestVersion.current++;
       window.removeEventListener('project-access-changed', refresh);
       window.removeEventListener('focus', refresh);
     };
-  }, []);
+  }, [load]);
   async function deleteProject(id: string, projectName: string) {
+    if (deleting) return;
     if (
       !window.confirm(
         `'${projectName}' 프로젝트를 삭제하시겠습니까? 소속된 모든 페이지와 파일이 삭제됩니다.`,
@@ -52,21 +62,28 @@ export function Projects({ user, logout }: { user: User; logout: () => void }) {
     ) {
       return;
     }
+    setDeleting(id);
+    setError('');
     try {
       await api(`/projects/${id}`, { method: 'DELETE' });
+      requestVersion.current++;
+      setLoading(false);
       setProjects((prev) => prev.filter((p) => p.id !== id));
     } catch (e) {
       setError(errorMessage(e));
+    } finally {
+      setDeleting(undefined);
     }
   }
   async function create(event: React.FormEvent) {
     event.preventDefault();
+    if (busy || !name.trim()) return;
     setBusy(true);
     setError('');
     try {
       const project = await api<Project>('/projects', {
         method: 'POST',
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name: name.trim() }),
       });
       window.location.assign(`/projects/${project.id}`);
     } catch (e) {
@@ -74,7 +91,8 @@ export function Projects({ user, logout }: { user: User; logout: () => void }) {
       setBusy(false);
     }
   }
-  const visible = projects.filter((p) => p.name.toLowerCase().includes(query.toLowerCase()));
+  const search = query.trim().toLocaleLowerCase('ko-KR');
+  const visible = projects.filter((p) => p.name.toLocaleLowerCase('ko-KR').includes(search));
   return (
     <div className="workspace">
       <aside className="workspace-sidebar">
@@ -124,27 +142,31 @@ export function Projects({ user, logout }: { user: User; logout: () => void }) {
           <div className="workspace-account">
             <NotificationBell />
             <AccountLink user={user} />
-            <span className="profile-chip">
+            <span className="profile-chip" title={user.displayName}>
               <span className="online-dot" />
-              {user.displayName}
+              <span>{user.displayName}</span>
             </span>
           </div>
         </header>
         <section className="project-section">
           <div className="section-title">
             <div>
-              <span className="eyebrow">YOUR CREATIVE SPACE</span>
               <h1>
                 내 프로젝트<span className="count">{projects.length}</span>
               </h1>
               <p>아이디어가 실제 화면이 되는 공간입니다.</p>
             </div>
-            <Button onClick={() => setCreating((v) => !v)}>
+            <Button
+              disabled={busy}
+              aria-expanded={creating}
+              aria-controls={creating ? 'create-project' : undefined}
+              onClick={() => setCreating((v) => !v)}
+            >
               <Plus size={17} />새 프로젝트
             </Button>
           </div>
           {creating && (
-            <form className="create-project" onSubmit={create}>
+            <form id="create-project" className="create-project" onSubmit={create}>
               <label htmlFor="project-name">프로젝트 이름</label>
               <input
                 autoFocus
@@ -153,12 +175,13 @@ export function Projects({ user, logout }: { user: User; logout: () => void }) {
                 required
                 placeholder="어떤 프로젝트를 만들까요?"
                 value={name}
+                disabled={busy}
                 onChange={(e) => setName(e.target.value)}
               />
-              <Button type="submit" loading={busy}>
+              <Button type="submit" loading={busy} disabled={!name.trim()}>
                 프로젝트 만들기
               </Button>
-              <Button variant="ghost" onClick={() => setCreating(false)}>
+              <Button variant="ghost" disabled={busy} onClick={() => setCreating(false)}>
                 취소
               </Button>
             </form>
@@ -175,13 +198,18 @@ export function Projects({ user, logout }: { user: User; logout: () => void }) {
               />
             </label>
           </div>
-          {error && (
+          {loadError && (
             <div className="error-banner" role="alert">
-              {error}
-              <Button variant="ghost" onClick={() => load()}>
+              {loadError}
+              <Button variant="ghost" onClick={() => void load()}>
                 다시 시도
               </Button>
             </div>
+          )}
+          {error && (
+            <p className="error-banner" role="alert">
+              {error}
+            </p>
           )}
           {loading ? (
             <p role="status" className="empty-state">
@@ -194,7 +222,8 @@ export function Projects({ user, logout }: { user: User; logout: () => void }) {
                   <a
                     className="project-card-link"
                     href={`/projects/${project.id}`}
-                    aria-label={project.name}
+                    aria-hidden="true"
+                    tabIndex={-1}
                   >
                     <div className={`project-thumbnail tone-${index % 3}`} aria-hidden="true">
                       <div className="mini-window">
@@ -223,7 +252,11 @@ export function Projects({ user, logout }: { user: User; logout: () => void }) {
                   </a>
                   <div className="project-card-info">
                     <div className="project-card-header-row">
-                      <h2>{project.name}</h2>
+                      <h2>
+                        <a href={`/projects/${project.id}`} title={project.name}>
+                          {project.name}
+                        </a>
+                      </h2>
                       {project.role === 'OWNER' && (
                         <div className="project-card-actions">
                           <button
@@ -231,6 +264,7 @@ export function Projects({ user, logout }: { user: User; logout: () => void }) {
                             className="share-project-btn"
                             aria-label={`${project.name} 공유`}
                             title="프로젝트 공유"
+                            disabled={deleting === project.id}
                             onClick={() => setSharing(project)}
                           >
                             <Share2 size={15} />
@@ -240,29 +274,29 @@ export function Projects({ user, logout }: { user: User; logout: () => void }) {
                             className="delete-project-btn"
                             aria-label={`${project.name} 삭제`}
                             title="프로젝트 삭제"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              void deleteProject(project.id, project.name);
-                            }}
+                            disabled={Boolean(deleting)}
+                            aria-busy={deleting === project.id}
+                            onClick={() => void deleteProject(project.id, project.name)}
                           >
                             <Trash2 size={15} />
                           </button>
                         </div>
                       )}
                     </div>
-                    <div>
+                    <div className="project-card-meta">
                       <span>
                         {project.pageCount}개 페이지 ·{' '}
                         {project.role === 'VIEWER' ? '보기 전용' : '편집 가능'}
                         {project.role !== 'OWNER' && ' · 공유받음'}
                       </span>
-                      <time>{new Date(project.updated_at).toLocaleDateString('ko-KR')}</time>
+                      <time dateTime={project.updated_at}>
+                        {new Date(project.updated_at).toLocaleDateString('ko-KR')}
+                      </time>
                     </div>
                   </div>
                 </article>
               ))}
-              {!query && (
+              {!search && (
                 <button className="new-project-card" onClick={() => setCreating(true)}>
                   <span>
                     <Plus size={24} />
@@ -271,10 +305,13 @@ export function Projects({ user, logout }: { user: User; logout: () => void }) {
                   <small>빈 캔버스에서 시작해 보세요</small>
                 </button>
               )}
-              {query && !visible.length && (
-                <div className="empty-state">
+              {search && !visible.length && (
+                <div className="empty-state" role="status">
                   <FolderOpen />
                   <p>검색 결과가 없습니다.</p>
+                  <Button variant="secondary" onClick={() => setQuery('')}>
+                    검색 초기화
+                  </Button>
                 </div>
               )}
             </div>

@@ -1,4 +1,8 @@
 import { Copy, Trash2, ArrowUp, ArrowDown, RotateCcw } from 'lucide-react';
+import { lazy, Suspense } from 'react';
+const RichTextControls = lazy(() =>
+  import('./controls/RichTextControls').then((m) => ({ default: m.RichTextControls })),
+);
 import {
   registry,
   effectiveStyle,
@@ -75,6 +79,17 @@ export function Inspector({
           <section>
             <h3>내용</h3>
             <ContentFields node={node} pageRoot={pageRoot} onUpdate={onUpdate} />
+            {node.type === 'richText' && (
+              <Suspense fallback={<p role="status">편집 도구를 불러오는 중…</p>}>
+                <RichTextControls
+                  key={node.id}
+                  node={node}
+                  theme={theme}
+                  breakpoint={breakpoint}
+                  onUpdate={onUpdate}
+                />
+              </Suspense>
+            )}
             <MainLayoutControls node={node} pageRoot={pageRoot} onUpdate={onUpdate} />
             {node.type === 'chat' && <ChatControls node={node} onUpdate={onUpdate} />}
             {node.type === 'table' && (

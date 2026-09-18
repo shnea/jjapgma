@@ -1,6 +1,7 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api, errorMessage } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
+import { Dialog } from '../../components/ui/Dialog';
 import { SharingPanel, type SharingData, type SharingActions } from './SharingPanel';
 
 export function SharingDialog({
@@ -12,19 +13,9 @@ export function SharingDialog({
   projectName: string;
   onClose: () => void;
 }) {
-  const dialog = useRef<HTMLDialogElement>(null);
   const [data, setData] = useState<SharingData>();
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  useLayoutEffect(() => {
-    const element = dialog.current!;
-    const trigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    element.showModal();
-    return () => {
-      element.close();
-      trigger?.focus();
-    };
-  }, []);
   useEffect(() => {
     api<SharingData>(`/projects/${projectId}/sharing`)
       .then(setData)
@@ -62,24 +53,13 @@ export function SharingDialog({
     },
   };
   return (
-    <dialog
-      ref={dialog}
+    <Dialog
       className="sharing-dialog"
-      aria-labelledby="sharing-title"
-      onCancel={(event) => {
-        event.preventDefault();
-        onClose();
-      }}
+      title="프로젝트 공유"
+      description={projectName}
+      busy={busy}
+      onClose={onClose}
     >
-      <header>
-        <div>
-          <h2 id="sharing-title">프로젝트 공유</h2>
-          <p>{projectName}</p>
-        </div>
-        <Button variant="ghost" onClick={onClose}>
-          닫기
-        </Button>
-      </header>
       <SharingPanel data={data} error={error} busy={busy} actions={actions} />
       {!data && error && (
         <Button
@@ -94,6 +74,6 @@ export function SharingDialog({
           다시 시도
         </Button>
       )}
-    </dialog>
+    </Dialog>
   );
 }

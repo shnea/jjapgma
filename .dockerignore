@@ -9,6 +9,7 @@ node_modules
 apps/web/public/export
 test-results
 playwright-report
-docs
+docs/*
+!docs/RICH_TEXT_RUNTIME.md
 eocs
 base.md

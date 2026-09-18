@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { validateSpec, type UiSpec, type Breakpoint } from '@jjapgma/ui-spec';
 import { NodeRenderer } from '../NodeRenderer';
 import { ExportAssetsContext, type ExportAssets } from './ExportAssets';
+import { RichTextIntegrationContext, type RichTextIntegration } from './RichTextIntegration';
+export type { RichTextIntegration } from './RichTextIntegration';
 import '../../../styles/tokens.css';
 import '../../../styles/renderer.css';
 import '../../../styles/elements.css';
@@ -16,10 +18,12 @@ export function Screen({
   spec: input,
   assets = {},
   device = 'desktop',
+  richText,
 }: {
   spec: UiSpec;
   assets?: ExportAssets;
   device?: Breakpoint;
+  richText?: RichTextIntegration;
 }) {
   const spec = validateSpec(input);
   const [height, setHeight] = useState(800);
@@ -39,14 +43,16 @@ export function Screen({
       }}
     >
       <ExportAssetsContext.Provider value={assets}>
-        <NodeRenderer
-          key={spec.root.id}
-          node={spec.root}
-          theme={spec.theme}
-          breakpoint={device}
-          root
-          preview
-        />
+        <RichTextIntegrationContext.Provider value={richText}>
+          <NodeRenderer
+            key={spec.root.id}
+            node={spec.root}
+            theme={spec.theme}
+            breakpoint={device}
+            root
+            preview
+          />
+        </RichTextIntegrationContext.Provider>
       </ExportAssetsContext.Provider>
     </div>
   );

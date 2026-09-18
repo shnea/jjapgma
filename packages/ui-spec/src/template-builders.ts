@@ -12,7 +12,80 @@ import {
 } from './template-parts.js';
 
 function title(spec: UiSpec, name: string, description: string) {
-  spec.root.children = [e('badge', 'WORKSPACE'), h(name, 36), muted(description)];
+  const heading = h(name, 36);
+  heading.props.titleLevel = 'h1';
+  spec.root.children = [g('container', [heading, muted(description)], { padding: 0, gap: 12 })];
+}
+export function documentEditor(spec: UiSpec) {
+  title(spec, '생각을 담는 공간', '메모부터 기획안까지, 필요한 내용을 자유롭게 정리하세요.');
+  spec.root.style.maxWidth = '1040px';
+  spec.root.style.alignSelf = 'center';
+  spec.root.children.push(
+    g('container', [i('문서 제목'), i('한 줄 요약')], { padding: 0, gap: 20 }),
+    e('richText', '문서 본문', { minHeight: '360px' }, { richTextMode: 'editor' }),
+    muted('작성 화면 예시입니다. 실제 문서 등록·발행은 서비스 API 연결이 필요합니다.'),
+  );
+}
+export function noticeDocument(spec: UiSpec) {
+  title(spec, '함께 일하는 방식을 더 간결하게', '서비스 소식 · 업데이트 안내');
+  spec.root.style.maxWidth = '960px';
+  spec.root.style.alignSelf = 'center';
+  spec.root.children.push(
+    e(
+      'richText',
+      '공지 본문',
+      { padding: 24, borderWidth: 0 },
+      {
+        richTextMode: 'viewer',
+        documentJson: JSON.stringify([
+          {
+            type: 'paragraph',
+            content: '더 명확한 공유와 빠른 의사결정을 위해 문서 작성 공간을 새롭게 준비했습니다.',
+          },
+          { type: 'heading', props: { level: 2 }, content: '달라진 점' },
+          {
+            type: 'bulletListItem',
+            content: '제목, 체크리스트, 표로 내용을 읽기 쉽게 정리할 수 있습니다.',
+          },
+          {
+            type: 'bulletListItem',
+            content: '본문의 서식과 화면 전체의 디자인을 따로 조절할 수 있습니다.',
+          },
+          { type: 'heading', props: { level: 2 }, content: '진행 일정' },
+          {
+            type: 'table',
+            content: {
+              type: 'tableContent',
+              rows: [
+                {
+                  cells: [
+                    [{ type: 'text', text: '단계', styles: { bold: true } }],
+                    [{ type: 'text', text: '안내', styles: { bold: true } }],
+                  ],
+                },
+                {
+                  cells: [
+                    [{ type: 'text', text: '시작', styles: {} }],
+                    [{ type: 'text', text: '팀과 문서 작성 방식 공유', styles: {} }],
+                  ],
+                },
+                {
+                  cells: [
+                    [{ type: 'text', text: '검토', styles: {} }],
+                    [{ type: 'text', text: '의견 수집 후 내용 보완', styles: {} }],
+                  ],
+                },
+              ],
+            },
+          },
+          {
+            type: 'quote',
+            content: '작은 개선을 꾸준히 쌓아, 더 편안한 작업 환경을 만들겠습니다.',
+          },
+        ]),
+      },
+    ),
+  );
 }
 export function analytics(spec: UiSpec) {
   title(spec, '서비스 분석', '방문 추이와 유입 경로, 주요 지표를 한눈에 확인하세요.');
@@ -86,16 +159,36 @@ function auth(spec: UiSpec, name: string, description: string, fields: UiNode[])
     padding: 40,
     gap: 24,
   };
+  for (const field of fields) {
+    if (field.type === 'button') field.style = { ...field.style, width: '100%', marginTop: 8 };
+    if (field.type === 'link') field.style = { ...field.style, textAlign: 'center', fontSize: 14 };
+  }
+  const panel = g(
+    'card',
+    [
+      g('container', [h(name, 28), muted(description)], { padding: 0, gap: 10, marginBottom: 8 }),
+      ...fields,
+    ],
+    {
+      width: '480px',
+      padding: 40,
+      gap: 24,
+      shadow: 'small',
+    },
+  );
+  panel.responsive.mobile = { padding: 24, gap: 20 };
   spec.root.children = [
     e('text', 'STUDIO', { fontSize: 20, fontWeight: '700', color: 'theme:primary' }),
-    g('card', [h(name, 28), muted(description), ...fields], {
-      width: '460px',
-      padding: 32,
-      gap: 20,
-      borderWidth: 1,
-      borderColor: 'theme:border',
-    }),
+    panel,
   ];
+}
+export function login(spec: UiSpec) {
+  auth(spec, '다시 만나 반가워요', '계정으로 로그인해 작업을 이어가세요.', [
+    i('이메일', 'email'),
+    i('비밀번호', 'password'),
+    b('로그인'),
+    e('link', '비밀번호를 잊으셨나요?', {}, { href: '#' }),
+  ]);
 }
 export function signup(spec: UiSpec) {
   auth(spec, '새로운 시작을 함께해요', '계정을 만들고 팀과 함께 작업을 시작하세요.', [
@@ -229,8 +322,7 @@ export function pricing(spec: UiSpec) {
         g(
           'card',
           [
-            e('badge', index === 1 ? '가장 많이 선택하는 플랜' : name),
-            h(name, 24),
+            row([h(name, 24), ...(index === 1 ? [e('badge', '추천', {}, { shape: 'pill' })] : [])]),
             muted(caption),
             h(price, 38),
             muted(index === 1 ? '사용자당 / 월' : index === 0 ? '무료로 시작' : '조직에 맞춘 요금'),
@@ -244,8 +336,9 @@ export function pricing(spec: UiSpec) {
             ),
           ],
           {
-            padding: 28,
-            gap: 20,
+            padding: 32,
+            gap: 24,
+            shadow: index === 1 ? 'medium' : 'none',
             borderWidth: index === 1 ? 2 : 1,
             borderColor: index === 1 ? 'theme:primary' : 'theme:border',
           },
@@ -408,25 +501,27 @@ function statePage(
   };
   spec.root.children = [
     g(
-      'card',
+      'container',
       [
-        e('text', code, {
-          color: 'theme:primary',
-          fontSize: code.length > 3 ? 32 : 56,
-          fontWeight: '700',
-          textAlign: 'center',
-        }),
+        ...(/^\d+$/.test(code)
+          ? [
+              e('text', code, {
+                color: 'theme:muted',
+                fontSize: 72,
+                fontWeight: '700',
+                textAlign: 'center',
+              }),
+            ]
+          : []),
         e('emptyState', title, {}, { stateType: state }),
         muted(description),
         e('button', action, { alignSelf: 'center' }, { variant: 'default' }),
       ],
       {
-        width: '600px',
-        padding: 40,
+        width: '560px',
+        padding: 0,
         gap: 24,
         textAlign: 'center',
-        borderWidth: 1,
-        borderColor: 'theme:border',
       },
     ),
   ];

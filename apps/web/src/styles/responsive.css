@@ -63,7 +63,7 @@
     padding: 8px;
   }
   .workspace-top {
-    height: 55px;
+    min-height: 55px;
     padding: 0 20px;
   }
   .project-section {
@@ -71,19 +71,24 @@
   }
   .section-title {
     align-items: flex-start;
+    flex-direction: column;
+    gap: 16px;
   }
   .section-title h1 {
     font-size: 25px;
   }
   .section-title p {
-    max-width: 180px;
     line-height: 1.7;
   }
   .project-grid {
     grid-template-columns: 1fr;
   }
   .project-filters .search-box {
-    width: 160px;
+    width: min(160px, 55%);
+  }
+  .project-card-actions button {
+    min-width: 44px;
+    min-height: 44px;
   }
   .workspace-footer {
     line-height: 1.8;

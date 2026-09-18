@@ -68,7 +68,7 @@ class FilesController {
   ) {
     const projectId = parse(uuid, project);
     const { category } = parse(
-      z.object({ category: z.literal('month').optional() }).strict(),
+      z.object({ category: z.enum(['month', 'tmp']).optional() }).strict(),
       body,
     );
     const metadata = validateUpload(file, config.UPLOAD_MAX_BYTES);

@@ -62,6 +62,8 @@ Docker의 npm registry 조회로 제공 버전을 확인했습니다. 참고: [N
 
 ## 외부 연동 적용
 
+서식 본문: `eocs/agent/integrations/editor.md`에 따라 `@shnea/blocknote@0.1.5`를 Docker npm registry로 확인하고 정확한 버전·lockfile로 고정했습니다. 패키지가 서식 편집/읽기를 맡고 앱은 UI Spec 저장·파일 권한·템플릿·내보내기를 담당합니다. 컴포넌트·템플릿 작성은 tmp 업로드, 실제 소비 서비스 연결은 category를 생략해 default 정책을 사용합니다. 새 환경변수·DB 마이그레이션은 없습니다. [사용법](RICH_TEXT_EDITOR.md), [서비스 연결](RICH_TEXT_RUNTIME.md).
+
 | 기능 | 지침 | 외부 책임 / 앱 책임 | 상태 |
 | --- | --- | --- | --- |
 | 인증 | eocs/agent/integrations/login-service.md | 외부 가입·인증·IdP 토큰; 앱 callback·서명/state/nonce/PKCE 검증·세션·권한 | 사용자 실로그인 및 이메일 소유 확인 보장 확인. [상세](LOGIN_INTEGRATION.md) |

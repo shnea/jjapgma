@@ -48,7 +48,8 @@ export function ChatComposer({
           composing.current = false;
         }}
         onKeyDown={(e) => {
-          e.stopPropagation();
+          // Let the editor handle saving while text-editing shortcuts stay in the composer.
+          if (!((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's')) e.stopPropagation();
           if (
             e.key === 'Enter' &&
             !e.shiftKey &&

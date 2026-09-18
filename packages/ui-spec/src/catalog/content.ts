@@ -10,6 +10,7 @@ export const contentComponents = {
   // 기본 (Basic)
   heading: item('제목', '기본', '새로운 제목', 'heading'),
   text: item('본문 텍스트', '기본', '여기에 내용을 입력하세요.', 'type'),
+  richText: item('서식 편집기', '기본', '서식 있는 본문', 'file-text'),
   button: item('버튼', '기본', '시작하기', 'mouse-pointer-2'),
   link: item('링크', '기본', '자세히 보기', 'link'),
   icon: item('아이콘', '기본', '★', 'star'),

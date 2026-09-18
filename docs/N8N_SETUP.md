@@ -48,6 +48,10 @@ Agent의 사용자 입력은 Define below로 지정한다. Webhook 노드 이름
 
 System Message는 [시스템 프롬프트](../infra/n8n/system-prompt.txt) 내용을 사용한다. 모델에 credential이나 MCP 서비스 토큰을 전달하지 않는다.
 
+2026-09-19 서식 편집기 반영: `richText` 선택 기준, `document-editor` / `notice-document` 템플릿, BlockNote JSON·파일 참조 규칙, 작성용 tmp와 소비 서비스 default의 책임 구분을 프롬프트에 추가했다. 먼저 이 컴포넌트가 포함된 앱/API를 배포하고 **AI Agent → Options → System Message 전체를 위 파일로 교체한 뒤 저장·게시**한다. 소스 파일 수정만으로 n8n의 기존 설정이 갱신되지는 않는다. 이번 변경으로 Webhook·Chat Model·MCP 연결 노드와 User Message 표현식을 바꿀 필요는 없다. 컴포넌트 속성·템플릿·디자인 기본값은 새 요청의 MCP 조회에서 받는다.
+
+적용 후 새 대화에서 “서식 편집기가 있는 문서 작성 화면”과 “읽기 전용 공지 화면”을 각각 요청한다. 실행 기록에서 `get_design_context`가 richText 명세를 조회하는지, 생성된 제안의 모드·본문 JSON이 요청에 맞는지 확인하고 검토 후 적용한다. 첨부가 없는 요청에서 가짜 파일 ID나 업로드 완료 주장이 나오지 않아야 한다. 저장소의 정적 검사와 외부 n8n에 프롬프트를 적용한 실모델 검증은 별개다.
+
 화면 생성 조회 최적화를 반영하려면 **AI Agent → Options → System Message** 전체를 위 파일의 최신 내용으로 교체하고 저장·게시한다. Prompt (User Message)의 Webhook 표현식은 그대로 둔다. 새 페이지는 `get_design_context` 한 번에 필요한 요소·템플릿을 받고 `create_page` 한 번으로 전체 화면을 제안한다. 기존 화면 수정만 현재 페이지 조회를 추가한다. MCP Client Tool의 Tools to Include는 All을 유지하고, 수동으로 도구를 선택한 경우 get_design_context를 포함한다. 앱의 도구 명세 축소는 서버 반영 즉시 적용되지만 n8n의 기존 System Message는 자동 갱신되지 않는다.
 
 get_design_context의 과거 12종 제한은 제거했다. 등록된 모든 종류를 한 요청으로 조회할 수 있으며, 모델이 같은 종류를 여러 번 넣어도 중복 제거 후 반환한다. 이 변경은 서버 도구 명세와 검증에 반영되므로 기존 System Message를 다시 바꾸지 않아도 적용된다. 별도로 추가했던 “최대 12개” 지침은 더 이상 필요 없다. 입력 오류 응답은 잘못된 필드 이름·허용 값·최소/최대 범위를 제공하므로 실제 오류를 수정하고 성공을 꾸며내지 않는다.

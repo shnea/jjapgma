@@ -201,7 +201,7 @@ function RenderNode({
       <span className="drop-hint">요소를 여기로 끌어오세요</span>
     ) : null
   ) : (
-    <ElementContent node={node} breakpoint={breakpoint} />
+    <ElementContent node={node} breakpoint={breakpoint} preview={preview} />
   );
 
   const overlay = ['modal', 'dialog', 'nonModal', 'drawer'].includes(node.type);

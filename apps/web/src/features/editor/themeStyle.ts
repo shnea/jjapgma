@@ -65,14 +65,18 @@ export function themeStyle(
         ? ['outline', 'ghost'].includes(node.props.variant ?? '')
           ? theme.primary
           : theme.onPrimary
-        : theme.text),
+        : node.type === 'badge'
+          ? theme.primary
+          : theme.text),
     '--node-background':
       resolveColor(value.background) ??
       (node.type === 'button'
         ? ['outline', 'ghost'].includes(node.props.variant ?? '')
           ? 'transparent'
           : theme.primary
-        : theme.background),
+        : node.type === 'badge'
+          ? `color-mix(in srgb, ${theme.primary} 8%, ${theme.surface})`
+          : theme.background),
     '--node-radius': `${value.radius ?? theme.radius}px`,
   } as CSSProperties;
 }

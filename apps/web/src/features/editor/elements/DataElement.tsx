@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { PaginationControl } from './PaginationControl';
 import type { UiNode } from '@jjapgma/ui-spec';
 
@@ -77,7 +78,10 @@ export function DataElement({ node }: { node: UiNode }) {
         <div className="element-accordion">
           {items.map((item, i) => (
             <details key={i}>
-              <summary>{item}</summary>
+              <summary>
+                <span>{item}</span>
+                <ChevronDown size={18} aria-hidden="true" />
+              </summary>
               <p>{node.props.text}</p>
             </details>
           ))}

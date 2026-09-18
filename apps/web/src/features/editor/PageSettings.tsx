@@ -1,6 +1,7 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
+import { Dialog } from '../../components/ui/Dialog';
 type Props = {
   name: string;
   disabled: boolean;
@@ -19,36 +20,17 @@ function PageSettingsDialog({
   onClose,
 }: Omit<Props, 'disabled'> & { onClose: () => void }) {
   const [draft, setDraft] = useState(name);
-  const ref = useRef<HTMLDialogElement>(null);
-  useLayoutEffect(() => {
-    const element = ref.current!;
-    const trigger = document.activeElement as HTMLElement | null;
-    element.showModal();
-    return () => {
-      element.close();
-      trigger?.focus();
-    };
-  }, []);
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (await onRename(draft.trim())) onClose();
   }
   return (
-    <dialog
-      className="page-settings-dialog"
-      ref={ref}
-      aria-labelledby="page-settings-title"
-      onCancel={(event) => {
-        event.preventDefault();
-        if (!busy) onClose();
-      }}
-    >
-      <h2 id="page-settings-title">페이지 수정</h2>
+    <Dialog className="page-settings-dialog" title="페이지 수정" busy={busy} onClose={onClose}>
       <form onSubmit={(event) => void submit(event)}>
         <label>
           페이지 이름
           <input
-            autoFocus
+            data-dialog-autofocus
             required
             maxLength={100}
             value={draft}
@@ -90,7 +72,7 @@ function PageSettingsDialog({
           페이지 삭제
         </Button>
       </div>
-    </dialog>
+    </Dialog>
   );
 }
 export function PageSettings(props: Props) {

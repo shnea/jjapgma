@@ -1,24 +1,5 @@
 .sharing-dialog {
-  width: min(760px, calc(100vw - 32px));
-  max-height: calc(100dvh - 48px);
-  border: 1px solid #dbe0e8;
-  border-radius: 16px;
-  padding: 24px;
-  color: #202838;
-  background: white;
-  box-shadow: 0 20px 80px #10182833;
-}
-.sharing-dialog::backdrop {
-  background: #10182866;
-}
-.sharing-dialog > header {
-  display: flex;
-  align-items: start;
-  justify-content: space-between;
-  gap: 16px;
-}
-.sharing-dialog h2 {
-  margin: 0;
+  width: 760px;
 }
 .sharing-dialog header p {
   margin: 8px 0;

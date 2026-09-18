@@ -32,7 +32,7 @@ test('input, calendar and range share a 44px control and align actions independe
   await centered(page);
   const boxes = await geometry(page);
   expect(boxes.slice(0, 3).map((b) => b.height)).toEqual([44, 44, 44]);
-  expect(boxes[3].height).toBe(38);
+  expect(boxes[3].height).toBe(44);
   for (const align of ['flex-start', 'center', 'flex-end', 'stretch']) {
     await page.getByLabel('기존 세로 정렬').selectOption(align);
     await centered(page);

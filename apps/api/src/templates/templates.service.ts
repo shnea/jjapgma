@@ -64,6 +64,7 @@ export class TemplatesService {
       const files = new Set<string>();
       function visit(node: UiNode) {
         if (node.props.attachment) files.add(node.props.attachment.fileId);
+        for (const file of node.props.richTextFiles ?? []) files.add(file.fileId);
         node.children.forEach(visit);
       }
       visit(spec.root);

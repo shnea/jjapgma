@@ -5,6 +5,7 @@ import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import { createSpec, createNode, componentTypes, pageTemplates } from '@jjapgma/ui-spec';
 import { openSpec } from './helpers';
+import { installRichTextIntegration, checkRichTextIntegration } from './rich-text-runtime';
 
 test('Storybook ZIP builds all project pages, component and template stories with local images and real interactions', async ({
   page,
@@ -31,6 +32,14 @@ test('Storybook ZIP builds all project pages, component and template stories wit
   const image = createNode('image');
   image.props.attachment = reference;
   spec.root.children.push(image);
+  const rich = createNode('richText');
+  rich.props.richTextMode = 'viewer';
+  rich.props.documentJson = JSON.stringify([
+    { type: 'paragraph', content: '내보낸 서식 문서' },
+    { type: 'image', props: { url: `jjapgma-file:${reference.fileId}`, name: reference.name } },
+  ]);
+  rich.props.richTextFiles = [reference];
+  spec.root.children.push(rich);
   const second = await page.request.post(`/api/projects/${initial.project_id}/pages`, {
     headers,
     data: { name: '두 번째 페이지' },
@@ -83,7 +92,21 @@ test('Storybook ZIP builds all project pages, component and template stories wit
     await readFile(resolve(folder, `src/data/page-${secondPage.id}.json`), 'utf8'),
   );
   expect(await readFile(resolve(folder, 'public', secondData.assets[image.id].src))).toEqual(png);
+  expect(
+    await readFile(
+      resolve(folder, 'public', secondData.assets[`${rich.id}:file:${reference.fileId}`].src),
+    ),
+  ).toEqual(png);
   // Use the pinned dependencies already installed in the isolated test image.
+  const richStory = resolve(folder, 'src/component-richtext.stories.jsx');
+  await writeFile(
+    richStory,
+    (await readFile(richStory, 'utf8')).replace(
+      'export const Desktop = {};',
+      'export const Desktop = { args: { richText: window.jjapgmaRichText } };',
+    ),
+  );
+  expect(await readFile(resolve(folder, 'RICH_TEXT.md'), 'utf8')).toContain('category');
   await symlink(resolve('node_modules'), resolve(folder, 'node_modules'), 'dir');
   try {
     const result = await promisify(execFile)('npm', ['run', 'build-storybook'], {
@@ -139,6 +162,7 @@ test('Storybook ZIP builds all project pages, component and template stories wit
     await expect(cssNode).toHaveCSS('border-bottom-width', '5px');
     await expect(cssNode).toHaveCSS('border-bottom-color', 'rgb(40, 80, 160)');
     await story(`page-${secondPage.id}--desktop`);
+    await expect(exported.getByText('내보낸 서식 문서', { exact: true })).toBeVisible();
     await expect
       .poll(() =>
         exported
@@ -164,6 +188,9 @@ test('Storybook ZIP builds all project pages, component and template stories wit
     await expect(exported.getByRole('img', { name: '프로젝트 이미지.png' }).first()).toBeVisible();
     expect(errors).toEqual([]);
     expect(external).toEqual([]);
+    await installRichTextIntegration(context);
+    await story('component-richtext--desktop');
+    await checkRichTextIntegration(exported);
   } finally {
     await context.close();
     server.kill();

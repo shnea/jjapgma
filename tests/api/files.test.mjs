@@ -36,7 +36,7 @@ const jsonRequest = (path, who, data) =>
 test('file proxy forwards only supported retention categories to the external service', async () => {
   const owner = await identity();
   const project = await (await jsonRequest('/projects', owner, { name: '파일 보존' })).json();
-  for (const category of [undefined, 'month', 'forever', ['month', 'month']]) {
+  for (const category of [undefined, 'month', 'tmp', 'forever', ['month', 'month']]) {
     const body = new FormData();
     body.set('file', new Blob(['hello'], { type: 'text/plain' }), 'retention.txt');
     for (const value of Array.isArray(category) ? category : category ? [category] : [])
@@ -165,6 +165,60 @@ test('export file content enforces byte limits and never follows redirects or se
   );
   await assert.rejects(client.content('file-1', 5), (error) => error.getStatus() === 413);
   assert.equal((await client.content('file-1', 6)).toString(), '123456');
+});
+
+test('rich text file ownership follows page saves and personal templates across projects', async () => {
+  const owner = await identity();
+  const first = await (await jsonRequest('/projects', owner, { name: '본문 원본' })).json();
+  const second = await (await jsonRequest('/projects', owner, { name: '본문 대상' })).json();
+  const body = new FormData();
+  body.set('file', new Blob(['rich text attachment'], { type: 'text/plain' }), 'document.txt');
+  body.set('category', 'tmp');
+  const upload = await fetch(`${base}/api/files/upload?projectId=${first.id}`, {
+    method: 'POST',
+    headers: owner.headers,
+    body,
+  });
+  assert.equal(upload.status, 201);
+  const file = await upload.json();
+  const page = await (
+    await jsonRequest(`/projects/${first.id}/pages`, owner, { name: '문서' })
+  ).json();
+  const target = await (
+    await jsonRequest(`/projects/${second.id}/pages`, owner, { name: '대상 문서' })
+  ).json();
+  const node = createNode('richText');
+  node.props.documentJson = JSON.stringify([
+    { type: 'file', props: { url: `jjapgma-file:${file.fileId}`, name: file.name } },
+  ]);
+  node.props.richTextFiles = [file];
+  page.spec.root.children = [node];
+  const save = (id, spec, revision = 1) =>
+    fetch(`${base}/api/pages/${id}`, {
+      method: 'PUT',
+      headers: { ...owner.headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: '문서', spec, baseRevision: revision }),
+    });
+  assert.equal((await save(page.id, page.spec)).status, 200);
+  assert.equal((await save(target.id, page.spec)).status, 400);
+  const templateResponse = await jsonRequest('/templates', owner, {
+    name: '본문 템플릿',
+    sourcePageId: page.id,
+    spec: page.spec,
+  });
+  assert.equal(templateResponse.status, 201);
+  const template = await templateResponse.json();
+  assert.equal(
+    await (
+      await jsonRequest(`/templates/${template.id}/files/${file.fileId}/content`, owner)
+    ).text(),
+    'rich text attachment',
+  );
+  const use = await jsonRequest(`/templates/${template.id}/use`, owner, { projectId: second.id });
+  assert.equal(use.status, 201, await use.clone().text());
+  assert.equal((await save(target.id, page.spec)).status, 200);
+  node.props.richTextFiles[0].name = 'forged.txt';
+  assert.equal((await save(page.id, page.spec, 2)).status, 400);
 });
 
 test('file client uses multipart and keeps missing credentials, provider failures and malformed responses explicit', async () => {

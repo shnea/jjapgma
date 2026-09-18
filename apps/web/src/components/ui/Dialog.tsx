@@ -4,11 +4,15 @@ import { X } from 'lucide-react';
 export function Dialog({
   title,
   busy = false,
+  className = 'page-library-dialog',
+  description,
   onClose,
   children,
 }: {
   title: string;
   busy?: boolean;
+  className?: string;
+  description?: string;
   onClose: () => void;
   children: ReactNode;
 }) {
@@ -27,15 +31,19 @@ export function Dialog({
   return (
     <dialog
       ref={ref}
-      className="page-library-dialog"
+      className={`app-dialog ${className}`}
       aria-labelledby={id}
+      aria-describedby={description ? `${id}-description` : undefined}
       onCancel={(event) => {
         event.preventDefault();
         if (!busy) onClose();
       }}
     >
       <header>
-        <h2 id={id}>{title}</h2>
+        <div>
+          <h2 id={id}>{title}</h2>
+          {description && <p id={`${id}-description`}>{description}</p>}
+        </div>
         <Button
           variant="ghost"
           className="modal-close-btn"

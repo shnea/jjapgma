@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { attachmentSchema, richTextSchema, richTextFileIds } from './rich-text.js';
 import { componentTypes, registry, type ComponentType } from './registry.js';
 import { themeSchema, type PageTheme } from './theme.js';
 import { tableSchema } from './table.js';
@@ -213,14 +214,12 @@ export const propsSchema = z
     includeTime: z.boolean().optional(),
     paginationMode: z.enum(['none', 'pagination', 'infinite']).optional(),
     paginationDesign: z.enum(['numbered', 'compact', 'simple']).optional(),
-    attachment: z
-      .object({
-        fileId: z.string().regex(/^[a-zA-Z0-9_-]{1,128}$/),
-        name: z.string().min(1).max(200),
-        mimeType: z.string().min(1).max(100),
-      })
-      .strict()
-      .optional(),
+    documentJson: richTextSchema.optional(),
+    richTextFiles: z.array(attachmentSchema).max(100).optional(),
+    richTextMode: z.enum(['editor', 'viewer']).optional(),
+    richTextFont: z.enum(['sans', 'serif', 'mono']).optional(),
+    richTextImageModal: z.boolean().optional(),
+    attachment: attachmentSchema.optional(),
     href: z
       .string()
       .max(2000)
@@ -293,6 +292,14 @@ export function validateSpec(input: unknown): UiSpec {
   function visit(node: UiNode) {
     if (ids.has(node.id)) throw new Error('중복된 요소 ID입니다.');
     ids.add(node.id);
+    const richFiles = node.props.richTextFiles ?? [];
+    const richIds = richTextFileIds(node.props.documentJson ?? '');
+    if (
+      new Set(richFiles.map((file) => file.fileId)).size !== richFiles.length ||
+      richFiles.some((file) => !richIds.has(file.fileId)) ||
+      [...richIds].some((id) => !richFiles.some((file) => file.fileId === id))
+    )
+      throw new Error('본문 첨부파일 참조를 확인하세요.');
     if (!registry[node.type].children && node.children.length)
       throw new Error('이 요소에는 하위 요소를 넣을 수 없습니다.');
     node.children.forEach(visit);
